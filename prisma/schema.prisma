@@ -1,0 +1,495 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  name            String
+  emailVerified   DateTime?
+  role            Role      @default(USER)
+  tokens          Int       @default(100)
+  referralCode    String    @unique
+  referredBy      String?
+  aiPreference    AITier    @default(ECONOMY)
+  preferences     Json?
+  customerKey     String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  profile         Profile?
+  subscription    Subscription?
+  referral        Referral?
+  files           File[]
+  analyses        Analysis[]
+  corrections     Correction[]
+  conversations   ChatConversation[]
+  reviews         Review[]
+  transactions    Transaction[]
+  referralLogs    ReferralLog[]  @relation("UserReferrals")
+  paymentIntents  PaymentIntent[]
+  usageLogs       UsageLog[]
+  aiUsageStats    AIUsageStats?
+  errorPatterns   ErrorPattern[]
+  errorFailures   ErrorResolutionFailure[]
+}
+
+model Profile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  phone           String?
+  company         String?
+  position        String?
+  language        String    @default("ko")
+  timezone        String    @default("Asia/Seoul")
+  emailNotifications Boolean @default(true)
+  twoFactorEnabled   Boolean @default(false)
+  lastPasswordChange DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model File {
+  id              String    @id @default(cuid())
+  userId          String
+  fileName        String
+  originalName    String
+  fileSize        Int
+  mimeType        String
+  uploadUrl       String
+  status          FileStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses        Analysis[]
+  corrections     Correction[]
+  errorPatterns   ErrorPattern[]
+  errorFailures   ErrorResolutionFailure[]
+}
+
+model Analysis {
+  id              String    @id @default(cuid())
+  fileId          String
+  userId          String
+  errors          Json
+  corrections     Json
+  report          Json
+  
+  // AI 분석 정보
+  aiTier          AITier    @default(TIER1)
+  confidence      Float?
+  tokensUsed      Int
+  promptTokens    Int
+  completionTokens Int
+  estimatedCost   Float
+  processingPath  Json      // 분석 경로 기록
+  
+  createdAt       DateTime  @default(now())
+  
+  file            File      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  correctionRecords Correction[]
+}
+
+model ChatConversation {
+  id              String    @id @default(cuid())
+  userId          String
+  title           String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages        ChatMessage[]
+}
+
+model ChatMessage {
+  id              String    @id @default(cuid())
+  conversationId  String
+  role            String    // "user" | "assistant" | "system"
+  content         String
+  tokensUsed      Int?
+  aiTier          String?   // "TIER1" | "TIER2"
+  attachments     Json?
+  createdAt       DateTime  @default(now())
+  
+  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id              String    @id @default(cuid())
+  userId          String
+  rating          Int       // 1-5
+  title           String
+  content         String
+  usageContext    String
+  timeSaved       Int?      // minutes
+  errorsFixed     Int?
+  status          ReviewStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id              String    @id @default(cuid())
+  userId          String
+  type            TransactionType
+  amount          Float
+  tokens          Int?
+  description     String
+  status          TransactionStatus @default(PENDING)
+  paymentKey      String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  plan            SubscriptionPlan @default(FREE)
+  status          SubscriptionStatus @default(ACTIVE)
+  tokensRemaining Int       @default(100)
+  monthlyTokens   Int       @default(100)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  validUntil      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  referralCode    String    @unique
+  referralLink    String    @unique  // 고유 추천 링크
+  referralCount   Int       @default(0)
+  totalEarned     Float     @default(0)
+  totalTokensEarned Int     @default(0)
+  
+  // 추천 보상 설정
+  rewardType      String    @default("PAYMENT_BASED") // PAYMENT_BASED, SIGNUP_BASED
+  tokenRewardAmount Int     @default(100) // 추천 보상 토큰 수
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralRewards ReferralReward[]
+}
+
+model ReferralLog {
+  id              String    @id @default(cuid())
+  referrerId      String
+  refereeEmail    String
+  status          ReferralStatus @default(PENDING)
+  rewardAmount    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  referrer        User      @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+}
+
+model AIUsageStats {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  
+  tier1Calls      Int       @default(0)
+  tier1Tokens     Int       @default(0)
+  tier1Cost       Float     @default(0)
+  
+  tier2Calls      Int       @default(0)
+  tier2Tokens     Int       @default(0)
+  tier2Cost       Float     @default(0)
+  
+  tokensSaved     Int       @default(0)
+  costSaved       Float     @default(0)
+  
+  lastUpdated     DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Correction {
+  id              String    @id @default(cuid())
+  fileId          String
+  userId          String
+  analysisId      String
+  
+  corrections     Json      // Details of all corrections
+  correctedFileUrl String?  // URL of corrected file
+  
+  status          CorrectionStatus @default(PENDING)
+  tokensUsed      Int       @default(0)
+  tokensCharged   Int       @default(0) // Actual tokens charged (may be less due to partial success)
+  
+  aiModel         String?
+  confidence      Float?
+  metadata        Json?     // Additional metadata
+  
+  createdAt       DateTime  @default(now())
+  
+  file            File      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis        Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([fileId])
+  @@index([status])
+}
+
+model AIPromptCache {
+  id              String    @id @default(cuid())
+  promptHash      String    @unique
+  model           String
+  response        Json
+  confidence      Float
+  tokensUsed      Int
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  hitCount        Int       @default(0)
+}
+
+model PaymentIntent {
+  id              String    @id @default(cuid())
+  userId          String
+  orderId         String    @unique
+  amount          Int
+  currency        String    @default("KRW")
+  status          PaymentStatus @default(PENDING)
+  subscriptionPlan String?
+  billingPeriod   String?
+  paymentKey      String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  failedAt        DateTime?
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UsageLog {
+  id              String    @id @default(cuid())
+  userId          String
+  feature         String
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AITier {
+  ECONOMY   // Tier 1 우선
+  BALANCED  // 자동 전환
+  PREMIUM   // Tier 2 우선
+  TIER1     // 실제 사용된 티어
+  TIER2
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum FileStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  PURCHASE
+  SUBSCRIPTION
+  REFUND
+  BONUS
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+  PAST_DUE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELED
+  PARTIALLY_REFUNDED
+  EXPIRED
+}
+
+enum CorrectionStatus {
+  PENDING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+model Announcement {
+  id              String    @id @default(cuid())
+  title           String
+  content         String
+  type            AnnouncementType @default(INFO)
+  priority        Int       @default(0)
+  isActive        Boolean   @default(true)
+  targetAudience  String?   // null means all users
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AdminLog {
+  id              String    @id @default(cuid())
+  adminId         String
+  action          String
+  targetType      String    // user, review, payment, etc.
+  targetId        String?
+  metadata        Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  UPDATE
+  MAINTENANCE
+}
+
+model ErrorPattern {
+  id              String    @id @default(cuid())
+  fileId          String
+  userId          String
+  errorType       String
+  errorCode       String?
+  errorMessage    String
+  cellLocation    String?
+  sheetName       String?
+  errorContext    Json?     // 오류 주변 컨텍스트 정보
+  
+  // 해결 정보
+  resolved        Boolean   @default(false)
+  resolutionType  String?   // AI, MANUAL, PARTIAL, FAILED
+  resolutionDetails Json?
+  resolutionTime  Int?      // 해결에 걸린 시간 (초)
+  
+  // 분류 정보
+  category        String?   // FORMULA, DATA_TYPE, REFERENCE, FORMAT, etc.
+  severity        String    // HIGH, MEDIUM, LOW
+  frequency       Int       @default(1)
+  
+  // AI 처리 정보
+  aiModel         String?
+  aiConfidence    Float?
+  aiSuggestion    String?
+  
+  createdAt       DateTime  @default(now())
+  
+  file            File      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([errorType, category])
+  @@index([resolved])
+  @@index([createdAt])
+}
+
+model ErrorResolutionFailure {
+  id              String    @id @default(cuid())
+  errorPatternId  String?
+  fileId          String
+  userId          String
+  
+  failureReason   String
+  failureDetails  Json?
+  attemptedMethods Json?    // 시도한 해결 방법들
+  
+  errorSnapshot   Json      // 오류 상태 스냅샷
+  userFeedback    String?
+  
+  createdAt       DateTime  @default(now())
+  
+  file            File      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ResolutionType {
+  AI_RESOLVED
+  MANUAL_RESOLVED
+  PARTIAL_RESOLVED
+  FAILED
+  SUGGESTION_ONLY
+}
+
+model ReferralReward {
+  id              String    @id @default(cuid())
+  referralId      String
+  referrerId      String    // 추천인 ID
+  refereeId       String    // 피추천인 ID
+  
+  rewardType      String    // SIGNUP, FIRST_PAYMENT, MILESTONE
+  tokensAwarded   Int
+  cashAwarded     Float     @default(0)
+  
+  triggerEvent    String    // 보상을 트리거한 이벤트
+  triggerDetails  Json?     // 이벤트 상세 정보
+  
+  status          String    @default("PENDING") // PENDING, COMPLETED, FAILED
+  completedAt     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  
+  referral        Referral  @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([status])
+}

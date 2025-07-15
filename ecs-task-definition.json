@@ -1,0 +1,96 @@
+{
+  "family": "exhell-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "exhell-app",
+      "image": "placeholder-image",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "3000"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/DATABASE_URL"
+        },
+        {
+          "name": "NEXTAUTH_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/NEXTAUTH_URL"
+        },
+        {
+          "name": "NEXTAUTH_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/NEXTAUTH_SECRET"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/OPENAI_API_KEY"
+        },
+        {
+          "name": "TOSS_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/TOSS_SECRET_KEY"
+        },
+        {
+          "name": "TOSS_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/TOSS_WEBHOOK_SECRET"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:exhell/production/REDIS_URL"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/exhell-app",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "mountPoints": [
+        {
+          "sourceVolume": "efs-volume",
+          "containerPath": "/app/uploads"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "efs-volume",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-12345678",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-12345678",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
+  "taskRoleArn": "arn:aws:iam::123456789012:role/exhell-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/exhell-ecs-execution-role"
+}
