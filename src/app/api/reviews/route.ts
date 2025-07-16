@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { GetReviewsValidator, GetReviewsHandler } from "@/Features/Review/GetReviews/GetReviews"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams

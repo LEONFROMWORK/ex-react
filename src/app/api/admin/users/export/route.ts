@@ -4,6 +4,8 @@ import { AuthPermissionService } from '@/lib/services/auth-permission.service'
 import { prisma } from '@/lib/prisma'
 import { format } from 'date-fns'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()

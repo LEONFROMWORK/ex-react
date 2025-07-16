@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth/session'
 import { GetAvailableTemplatesHandler } from '@/Features/ExcelGeneration/GenerateFromTemplate/GenerateFromTemplate'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // 인증 확인 (테스트를 위해 임시로 비활성화)

@@ -140,4 +140,4 @@ def crawl_oppadu(start_page=1, end_page=300):
             continue
 
 if __name__ == "__main__":
-    crawl_oppadu() 
+    crawl_oppadu(end_page=200) 

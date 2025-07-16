@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from '@/lib/auth/session'
 import { GetUsageReportValidator, GetUsageReportHandler } from "@/Features/UsageTracking/GetUsageReport/GetUsageReport"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     // Check authentication

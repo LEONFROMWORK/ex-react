@@ -3,6 +3,8 @@ import { getServerSession } from "@/lib/auth-helper"
 import { prisma } from "@/lib/prisma"
 import * as z from "zod"
 
+export const dynamic = 'force-dynamic'
+
 const profileUpdateSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional(),

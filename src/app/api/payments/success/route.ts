@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ConfirmPaymentValidator, ConfirmPaymentHandler } from "@/Features/Payment/ConfirmPayment/ConfirmPayment"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams

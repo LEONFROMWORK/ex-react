@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth/session'
 
+export const dynamic = 'force-dynamic'
+
 interface OpenRouterModel {
   id: string
   name: string
