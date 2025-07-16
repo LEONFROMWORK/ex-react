@@ -114,6 +114,14 @@ def crawl_oppadu(start_page=1, end_page=3): # Test with a few pages first
 
     # Use undetected_chromedriver
     options = uc.ChromeOptions()
+    
+    # --- Start of Bot Evasion Options from https://yoonminlee.com/selenium-bot-detection-bypass
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    # The following options might not be compatible with undetected_chromedriver
+    # options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    # options.add_experimental_option('useAutomationExtension', False)
+    # --- End of Bot Evasion Options
+    
     # options.add_argument('--headless') # Headless mode can still be detected. Run with GUI first.
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -122,90 +130,94 @@ def crawl_oppadu(start_page=1, end_page=3): # Test with a few pages first
     driver = uc.Chrome(options=options)
     
     try:
-        for page in range(start_page, end_page + 1):
-            target_url = f"{base_url}?board_id=1&page={page}"
-            print(f"Crawling Page: {page} -> {target_url}")
-            driver.get(target_url)
-            time.sleep(3) # Give page time to load initial scripts
-
-            # Wait for post items to be loaded
-            try:
-                wait = WebDriverWait(driver, 20)
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, "post-item")))
-            except TimeoutException:
-                print(f"Error: Timed out waiting for post items on page {page}.")
+        with open(output_file, 'a', encoding='utf-8') as f:
+            for page in range(start_page, end_page + 1):
+                target_url = f"{base_url}?board_id=1&page={page}"
+                print(f"Crawling Page: {page} -> {target_url}")
+                driver.get(target_url)
                 
-                # Create logs directory if it doesn't exist
-                os.makedirs("../../logs", exist_ok=True)
+                # --- Move script execution after get()
+                driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
                 
-                screenshot_path = f"../../logs/error_screenshot_page_{page}.png"
-                html_path = f"../../logs/error_page_source_{page}.html"
-                
-                driver.save_screenshot(screenshot_path)
-                with open(html_path, 'w', encoding='utf-8') as f_html:
-                    f_html.write(driver.page_source)
-                    
-                print(f"Debug Info: Screenshot saved to '{screenshot_path}'")
-                print(f"Debug Info: Page source saved to '{html_path}'")
-                print("Skipping to next page.")
-                continue
+                time.sleep(3) # Give page time to load initial scripts
 
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            posts = soup.find_all('div', class_='post-item')
-            print(f"Found {len(posts)} posts on page {page}")
-
-            if not posts:
-                print("No more posts found, stopping.")
-                break
-
-            for post in posts:
-                post_url = None # Initialize post_url
+                # Wait for post items to be loaded
                 try:
-                    title_container = post.find('h3', class_='post-title')
-                    if not title_container:
-                        continue # Skip if title container is not found
+                    wait = WebDriverWait(driver, 20)
+                    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "post-item")))
+                except TimeoutException:
+                    print(f"Error: Timed out waiting for post items on page {page}.")
                     
-                    title_element = title_container.find('a')
-                    if not title_element:
-                        continue # Skip if link is not found
-
-                    post_url = title_element['href']
-                    if not post_url.startswith('http'):
-                        post_url = "https://www.oppadu.com" + post_url
+                    # Create logs directory if it doesn't exist
+                    os.makedirs("../../logs", exist_ok=True)
                     
-                    question, answers = get_post_details(driver, post_url)
+                    screenshot_path = f"../../logs/error_screenshot_page_{page}.png"
+                    html_path = f"../../logs/error_page_source_{page}.html"
+                    
+                    driver.save_screenshot(screenshot_path)
+                    with open(html_path, 'w', encoding='utf-8') as f_html:
+                        f_html.write(driver.page_source)
+                        
+                    print(f"Debug Info: Screenshot saved to '{screenshot_path}'")
+                    print(f"Debug Info: Page source saved to '{html_path}'")
+                    print("Skipping to next page.")
+                    continue
 
-                    if question and answers:
-                        # 엑셀 관련성 및 길이 필터링
-                        if not (is_excel_related(question) or any(is_excel_related(ans) for ans in answers)):
-                            continue
-                        if not (30 <= len(question) <= 2000):
-                            continue
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+                posts = soup.find_all('div', class_='post-item')
+                print(f"Found {len(posts)} posts on page {page}")
 
-                        # QA 쌍 만들기
-                        for answer in answers:
-                            if not (40 <= len(answer) <= 2000):
+                if not posts:
+                    print("No more posts found, stopping.")
+                    break
+
+                for post in posts:
+                    post_url = None # Initialize post_url
+                    try:
+                        title_container = post.find('h3', class_='post-title')
+                        if not title_container:
+                            continue # Skip if title container is not found
+                        
+                        title_element = title_container.find('a')
+                        if not title_element:
+                            continue # Skip if link is not found
+
+                        post_url = title_element['href']
+                        if not post_url.startswith('http'):
+                            post_url = "https://www.oppadu.com" + post_url
+                        
+                        question, answers = get_post_details(driver, post_url)
+
+                        if question and answers:
+                            # 엑셀 관련성 및 길이 필터링
+                            if not (is_excel_related(question) or any(is_excel_related(ans) for ans in answers)):
+                                continue
+                            if not (30 <= len(question) <= 2000):
                                 continue
 
-                            excel_versions = extract_excel_version(question + " " + answer)
-                            qa_pair = {
-                                "question": question,
-                                "answer": answer,
-                                "excel_versions": excel_versions,
-                                "source": post_url,
-                                "collected_at": datetime.now().isoformat()
-                            }
-                            
-                            with open(output_file, 'a', encoding='utf-8') as f:
+                            # QA 쌍 만들기
+                            for answer in answers:
+                                if not (40 <= len(answer) <= 2000):
+                                    continue
+
+                                excel_versions = extract_excel_version(question + " " + answer)
+                                qa_pair = {
+                                    "question": question,
+                                    "answer": answer,
+                                    "excel_versions": excel_versions,
+                                    "source": post_url,
+                                    "collected_at": datetime.now().isoformat()
+                                }
+                                
                                 f.write(json.dumps(qa_pair, ensure_ascii=False) + '\n')
-                        print(f"  -> Successfully processed and saved QA from: {post_url}")
+                            print(f"  -> Successfully processed and saved QA from: {post_url}")
+                    
+                    except Exception as e:
+                        print(f"  -> Error processing post: {post_url}, {e}")
+                        continue
                 
-                except Exception as e:
-                    print(f"  -> Error processing post: {post_url}, {e}")
-                    continue
-            
-            time.sleep(random.uniform(1, 2))
-            
+                time.sleep(random.uniform(1, 2))
+                
     finally:
         driver.quit()
         print("\n--- Crawler Finished ---")

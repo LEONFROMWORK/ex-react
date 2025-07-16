@@ -25,9 +25,28 @@ const tierIcons = {
   [USER_TIERS.ENTERPRISE]: Building2
 }
 
+import { isBuildTime } from '@/lib/utils/server-only'
+
 export default async function AdminDashboardPage() {
+  // Mock data for build time
+  if (isBuildTime) {
+    return <AdminDashboardClient stats={mockStats} />
+  }
+  
   const statsService = AdminStatsService.getInstance()
   const stats = await statsService.getDashboardStats()
+  
+  return <AdminDashboardClient stats={stats} />
+}
+
+const mockStats = {
+  users: { total: 0, active: 0, new: 0, byTier: {} },
+  analyses: { total: 0, today: 0, week: 0, month: 0 },
+  revenue: { total: 0, today: 0, week: 0, month: 0 },
+  aiUsage: { total: 0, today: 0, cost: 0 }
+}
+
+function AdminDashboardClient({ stats }: { stats: any }) {
   
   return (
     <div className="space-y-8">
@@ -246,4 +265,4 @@ export default async function AdminDashboardPage() {
       </div>
     </div>
   )
-}
+}}

@@ -2,9 +2,11 @@ import { NextAuthOptions } from "next-auth"
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import { db } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
+import { env } from "@/lib/env"
+import { isServer, isBuildTime } from "@/lib/utils/server-only"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -12,7 +14,7 @@ const loginSchema = z.object({
 })
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: (isServer && !isBuildTime && env.DATABASE_URL) ? PrismaAdapter(db) as any : undefined,
   session: {
     strategy: "jwt",
   },
@@ -27,8 +29,8 @@ export const authOptions: NextAuthOptions = {
         try {
           const { email, password } = loginSchema.parse(credentials)
 
-          // Demo mode without database
-          if (!process.env.DATABASE_URL) {
+          // Demo mode without database or during build
+          if (!env.DATABASE_URL || isBuildTime) {
             // Demo credentials for testing
             const validCredentials = [
               { email: "test@example.com", password: "password123", name: "Test User", role: "USER" },
@@ -48,7 +50,7 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-          const user = await prisma.user.findUnique({
+          const user = await db.user.findUnique({
             where: { email },
           })
 

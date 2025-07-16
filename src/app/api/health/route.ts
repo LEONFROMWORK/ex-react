@@ -1,17 +1,31 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { db } from "@/lib/db"
+import { env } from "@/lib/env"
+import { isServer, isBuildTime } from "@/lib/utils/server-only"
 
 export async function GET(req: NextRequest) {
   let databaseStatus = "unknown"
   let redisStatus = "not_configured"
   
+  // Skip database check during build time
+  if (isBuildTime) {
+    return NextResponse.json({
+      status: "build_mode",
+      message: "Health check skipped during build"
+    })
+  }
+  
   // Check database connection
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    databaseStatus = "healthy"
-  } catch (error) {
-    console.warn("Database check failed:", error)
-    databaseStatus = "unhealthy"
+  if (env.DATABASE_URL) {
+    try {
+      await db.$queryRaw`SELECT 1`
+      databaseStatus = "healthy"
+    } catch (error) {
+      console.warn("Database check failed:", error)
+      databaseStatus = "unhealthy"
+    }
+  } else {
+    databaseStatus = "not_configured"
   }
   
   // Check cache service status
@@ -35,7 +49,7 @@ export async function GET(req: NextRequest) {
     status: databaseStatus === "healthy" || databaseStatus === "unhealthy" ? "operational" : "degraded",
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || "1.0.0",
-    environment: process.env.NODE_ENV,
+    environment: env.NODE_ENV,
     services: {
       database: databaseStatus,
       redis: redisStatus,
