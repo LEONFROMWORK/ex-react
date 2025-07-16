@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { ReviewCard } from "@/components/review/ReviewCard"
 import { ReviewSummary } from "@/components/review/ReviewSummary"
@@ -42,7 +42,7 @@ interface ReviewData {
   }
 }
 
-export default function ReviewsPage() {
+function ReviewsContent() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<ReviewData | null>(null)
@@ -200,5 +200,19 @@ export default function ReviewsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ReviewsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto py-10">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    }>
+      <ReviewsContent />
+    </Suspense>
   )
 }

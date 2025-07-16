@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +69,7 @@ const templates: Template[] = [
 
 export function ExcelGenerator() {
   const { toast } = useToast()
-  const [generatorService] = useState(() => new ExcelGeneratorService())
+  const [generatorService, setGeneratorService] = useState<ExcelGeneratorService | null>(null)
   const [generationType, setGenerationType] = useState<'template' | 'ai'>('template')
   const [selectedTemplate, setSelectedTemplate] = useState('sales-report')
   const [customPrompt, setCustomPrompt] = useState('')
@@ -81,7 +81,20 @@ export function ExcelGenerator() {
   })
   const [generating, setGenerating] = useState(false)
   
+  // Initialize service on client side only
+  useEffect(() => {
+    setGeneratorService(new ExcelGeneratorService())
+  }, [])
+  
   const handleGenerate = async () => {
+    if (!generatorService) {
+      toast({
+        title: "초기화 중",
+        description: "서비스를 초기화하는 중입니다. 잠시 후 다시 시도해주세요.",
+        variant: "destructive"
+      })
+      return
+    }
     if (generationType === 'ai' && !customPrompt.trim()) {
       toast({
         title: "설명 필요",

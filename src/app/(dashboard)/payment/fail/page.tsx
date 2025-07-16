@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,7 +20,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   INTERNAL_ERROR: "시스템 오류가 발생했습니다.",
 }
 
-export default function PaymentFailPage() {
+function PaymentFailContent() {
   const searchParams = useSearchParams()
   const code = searchParams.get("code") || "UNKNOWN_ERROR"
   const message = searchParams.get("message") || ""
@@ -77,5 +78,23 @@ export default function PaymentFailPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function PaymentFailPage() {
+  return (
+    <Suspense fallback={
+      <div className="container max-w-2xl py-20">
+        <Card>
+          <CardContent className="py-16">
+            <div className="flex justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <PaymentFailContent />
+    </Suspense>
   )
 }
