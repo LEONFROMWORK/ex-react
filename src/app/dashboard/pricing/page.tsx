@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, X, Zap, Crown, Building2 } from "lucide-react"
 import Link from "next/link"
-import { USER_TIERS, TIER_LIMITS, TIER_PRICING } from '@/lib/constants/user-tiers'
+import { USER_TIERS, TIER_LIMITS, TIER_PRICING, type UserTier } from '@/lib/constants/user-tiers'
 import { useSession } from 'next-auth/react'
 import { UserTierService } from '@/lib/services/user-tier.service'
 import { useRouter } from 'next/navigation'
@@ -115,7 +115,7 @@ export default function PricingPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   
   // 현재 사용자 등급 가져오기
-  useState(() => {
+  useEffect(() => {
     const loadUserTier = async () => {
       if (!session?.user?.id) return
       const tierService = UserTierService.getInstance()
@@ -123,7 +123,7 @@ export default function PricingPage() {
       setCurrentUserTier(tier)
     }
     loadUserTier()
-  })
+  }, [session?.user?.id])
   
   const handleUpgrade = async (tier: UserTier) => {
     if (!session?.user?.id) {
@@ -277,9 +277,10 @@ export default function PricingPage() {
                       ? "다운그레이드"
                       : "업그레이드"}
                   </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         <div className="mt-16 text-center">

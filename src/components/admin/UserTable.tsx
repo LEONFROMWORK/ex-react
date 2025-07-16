@@ -227,6 +227,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
   }
 
   return (
+    <>
     <div className="rounded-md border">
       <Table>
         <TableHeader>
