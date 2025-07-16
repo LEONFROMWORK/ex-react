@@ -1,0 +1,81 @@
+services:
+  # Web Service - Next.js 애플리케이션
+  - type: web
+    name: exhell-app
+    runtime: node
+    region: singapore # 아시아 지역 최적화
+    plan: free # starter, standard, pro 중 선택
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      # 기본 환경 설정
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      
+      # NextAuth 설정
+      - key: NEXTAUTH_URL
+        sync: false # Render에서 직접 설정
+      - key: NEXTAUTH_SECRET
+        generateValue: true # 자동 생성
+      
+      # 데이터베이스 (PostgreSQL)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exhell-db
+          property: connectionString
+      
+      # AI 서비스
+      - key: OPENAI_API_KEY
+        sync: false # 민감 정보는 대시보드에서 설정
+      
+      # 파일 저장소 (AWS S3)
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: ap-northeast-2
+      - key: AWS_S3_BUCKET
+        sync: false
+      
+      # 이메일 설정 (선택사항)
+      - key: SKIP_EMAIL_VERIFICATION
+        value: true # MVP 단계에서는 이메일 인증 스킵
+      
+      # 가입 보너스
+      - key: SIGNUP_BONUS_TOKENS
+        value: "100"
+      
+      # 캐시 설정 (초기에는 메모리 캐시 사용)
+      - key: CACHE_PROVIDER
+        value: memory
+    
+    # 헬스 체크
+    healthCheckPath: /api/health
+    
+    # 자동 배포 설정
+    autoDeploy: true # main 브랜치 푸시 시 자동 배포
+
+databases:
+  # PostgreSQL 데이터베이스
+  - name: exhell-db
+    databaseName: exhell_prod
+    user: exhell_user
+    region: singapore
+    plan: free # starter, standard, pro 중 선택
+    
+    # 백업 설정 (유료 플랜에서만 사용 가능)
+    # ipAllowList:
+    #   - source: 0.0.0.0/0
+    #     description: Allow all connections
+
+# 환경별 설정 (선택사항)
+# envVarGroups:
+#   - name: exhell-production
+#     envVars:
+#       - key: REDIS_URL
+#         sync: false
+#       - key: SENTRY_DSN
+#         sync: false
