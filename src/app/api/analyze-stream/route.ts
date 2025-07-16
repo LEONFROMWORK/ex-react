@@ -50,14 +50,14 @@ export async function POST(request: NextRequest) {
     const teeStream = stream.tee()
     
     // 한 스트림은 응답으로, 다른 스트림은 캐싱용으로
-    const cacheStream = teeStream[1]
-    const reader = cacheStream.getReader()
+    const cacheStream = teeStream[1] as any
+    const reader = cacheStream.getReader ? cacheStream.getReader() : cacheStream
     
     // 백그라운드에서 캐시 저장
     (async () => {
       try {
         while (true) {
-          const { done, value } = await reader.read()
+          const { done, value } = await (reader as any).read()
           if (done) break
           
           if (value.type === 'result') {

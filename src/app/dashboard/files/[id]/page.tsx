@@ -21,7 +21,10 @@ import {
   Loader2,
   ArrowLeft,
   FileText,
-  Zap
+  Zap,
+  Calculator,
+  Link,
+  Hash
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'

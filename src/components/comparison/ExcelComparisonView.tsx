@@ -139,7 +139,7 @@ export function ExcelComparisonView({
                   <p className="text-sm font-medium">AI 변환</p>
                   {changes?.prompt && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      "{changes.prompt}"
+                      &quot;{changes.prompt}&quot;
                     </p>
                   )}
                 </div>
@@ -312,7 +312,7 @@ export function ExcelComparisonView({
                   <p className="text-xs text-muted-foreground">5분 전</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  프롬프트: "누적 합계를 보여주는 열을 추가해줘"
+                  프롬프트: &quot;누적 합계를 보여주는 열을 추가해줘&quot;
                 </p>
               </motion.div>
 
@@ -327,7 +327,7 @@ export function ExcelComparisonView({
                   <p className="text-xs text-muted-foreground">10분 전</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  프롬프트: "전일 대비 성장률을 계산해서 추가해줘"
+                  프롬프트: &quot;전일 대비 성장률을 계산해서 추가해줘&quot;
                 </p>
               </motion.div>
 
@@ -342,7 +342,7 @@ export function ExcelComparisonView({
                   <p className="text-xs text-muted-foreground">15분 전</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  프롬프트: "이 데이터로 판매 보고서를 만들어줘"
+                  프롬프트: &quot;이 데이터로 판매 보고서를 만들어줘&quot;
                 </p>
               </motion.div>
             </div>

@@ -212,7 +212,7 @@ export default async function UserDetailPage({
                     <div>
                       <p className="font-medium">{file.originalName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(1)} MB • {format(new Date(file.createdAt), "yyyy년 MM월 dd일", { locale: ko })}
+                        {(file.fileSize / 1024 / 1024).toFixed(1)} MB • {format(new Date(file.createdAt), "yyyy년 MM월 dd일", { locale: ko })}
                       </p>
                     </div>
                     <Badge variant={file.status === 'COMPLETED' ? "outline" : "secondary"}>

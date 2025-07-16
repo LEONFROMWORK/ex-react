@@ -85,11 +85,11 @@ export class AnalyzeVBACodeValidator {
     }
 
     // 각 모듈 검증
-    for (const module of request.modules) {
-      if (!module.name || !module.code) {
+    for (const vbaModule of request.modules) {
+      if (!vbaModule.name || !vbaModule.code) {
         return Result.failure({
           code: 'VBA_ANALYZE.INVALID_MODULE',
-          message: `모듈 '${module.name || '이름 없음'}'이 유효하지 않습니다`,
+          message: `모듈 '${vbaModule.name || '이름 없음'}'이 유효하지 않습니다`,
         })
       }
     }
@@ -127,17 +127,17 @@ export class AnalyzeVBACodeHandler {
       // 1. 각 모듈 분석
       const moduleAnalysis: AnalyzeVBACodeResponse['moduleAnalysis'] = []
       
-      for (const module of request.modules) {
-        const analysisResult = this.analyzer.analyze(module.code, module.name)
+      for (const vbaModule of request.modules) {
+        const analysisResult = this.analyzer.analyze(vbaModule.code, vbaModule.name)
         
         if (!analysisResult.isSuccess) {
-          console.error(`모듈 '${module.name}' 분석 실패:`, analysisResult.error)
+          console.error(`모듈 '${vbaModule.name}' 분석 실패:`, analysisResult.error)
           continue
         }
 
         moduleAnalysis.push({
-          moduleName: module.name,
-          moduleType: module.type,
+          moduleName: vbaModule.name,
+          moduleType: vbaModule.type,
           analysis: analysisResult.value,
         })
       }

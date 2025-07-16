@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
         if (cached) {
           return NextResponse.json({
             success: true,
-            ...cached,
+            ...(typeof cached === 'object' ? cached : { data: cached }),
             cached: true
           })
         }

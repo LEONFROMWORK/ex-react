@@ -102,10 +102,10 @@ export class ExcelAnalyzer {
     for (const moduleResult of await this.analyze(workbook)) {
       for (const item of moduleResult.results) {
         if (fixIds.includes(item.id) && item.autoFixAvailable) {
-          const module = this.modules.get(moduleResult.moduleId)
-          if (module && module.fix) {
+          const analysisModule = this.modules.get(moduleResult.moduleId)
+          if (analysisModule && analysisModule.fix) {
             try {
-              const fixResult = await module.fix(workbook, item)
+              const fixResult = await analysisModule.fix(workbook, item)
               results.push({
                 itemId: item.id,
                 success: fixResult.success,

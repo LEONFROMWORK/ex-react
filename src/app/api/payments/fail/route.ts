@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
         data: {
           status: "FAILED",
           failedAt: new Date(),
-          metadata: {
+          metadata: JSON.stringify({
             failureCode: code,
             failureMessage: message,
-          },
+          }),
         },
       })
     }

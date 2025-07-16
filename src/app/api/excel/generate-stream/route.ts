@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
       // 스트림 응답 반환
       const stream = streamResult.value
-      const response = new Response(stream, {
+      const response = new Response(stream as any, {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="generated_${Date.now()}.xlsx"`,

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AIModelManager } from '@/lib/ai/model-manager'
-import { getServerSession } from '@/lib/auth/session'
+import { auth } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await auth()
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
           name: 'OpenRouter LLAMA 우선 정책',
           description: 'OpenRouter를 통한 LLAMA 모델을 기본으로 사용하는 정책',
           selectionMode: 'automatic',
-          rules: {
+          rules: JSON.stringify({
             fallbackChain: ['openrouter', 'openai', 'gemini', 'claude'],
             taskTypeMapping: {
               'EXCEL_ANALYSIS': ['openrouter'],
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
             },
             costOptimization: true,
             qualityPriority: 0.8
-          }
+          })
         }
       })
     } else {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           name: 'OpenRouter LLAMA 우선 정책',
           description: 'OpenRouter를 통한 LLAMA 모델을 기본으로 사용하는 정책',
           selectionMode: 'automatic',
-          rules: {
+          rules: JSON.stringify({
             fallbackChain: ['openrouter', 'openai', 'gemini', 'claude'],
             taskTypeMapping: {
               'EXCEL_ANALYSIS': ['openrouter'],
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
             },
             costOptimization: true,
             qualityPriority: 0.8
-          },
+          }),
           isActive: true
         }
       })

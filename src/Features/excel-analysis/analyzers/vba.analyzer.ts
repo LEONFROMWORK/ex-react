@@ -22,10 +22,10 @@ export class VBAAnalyzer implements IAnalyzer {
       }
       
       // 각 모듈 분석
-      for (const module of vbaModules) {
+      for (const vbaModule of vbaModules) {
         const analysisResult = await this.vbaService.analyzeVBACode(
-          module.code,
-          module.moduleName
+          vbaModule.code,
+          vbaModule.moduleName
         )
         
         // 오류를 IAnalysisResult 형식으로 변환
@@ -38,7 +38,7 @@ export class VBAAnalyzer implements IAnalyzer {
             message: error.message,
             suggestion: error.suggestion,
             location: {
-              sheet: module.moduleName,
+              sheet: vbaModule.moduleName,
               cell: `Line ${error.line}`,
               formula: error.procedure || ''
             },
@@ -58,7 +58,7 @@ export class VBAAnalyzer implements IAnalyzer {
             message: issue.description,
             suggestion: issue.recommendation,
             location: {
-              sheet: module.moduleName,
+              sheet: vbaModule.moduleName,
               cell: `Line ${issue.line}`,
               formula: ''
             },
@@ -74,12 +74,12 @@ export class VBAAnalyzer implements IAnalyzer {
             code: 'VBA_SUMMARY',
             type: 'info',
             severity: 'low',
-            message: `VBA 모듈 '${module.moduleName}' 분석 완료: ` +
+            message: `VBA 모듈 '${vbaModule.moduleName}' 분석 완료: ` +
                     `${analysisResult.summary.errorCount}개 오류, ` +
                     `${analysisResult.summary.warningCount}개 경고, ` +
                     `${analysisResult.securityIssues.length}개 보안 문제`,
             location: {
-              sheet: module.moduleName,
+              sheet: vbaModule.moduleName,
               cell: '',
               formula: ''
             },
@@ -140,9 +140,9 @@ export class VBAAnalyzer implements IAnalyzer {
       // VBA 코드 추출
       const vbaModules = await this.vbaService.extractVBACode(workbook)
       
-      for (const module of vbaModules) {
+      for (const vbaModule of vbaModules) {
         const moduleIssues = vbaIssues.filter(i => 
-          i.location.sheet === module.moduleName
+          i.location.sheet === vbaModule.moduleName
         )
         
         if (moduleIssues.length > 0) {
@@ -150,7 +150,7 @@ export class VBAAnalyzer implements IAnalyzer {
           const vbaErrors = moduleIssues.map(issue => ({
             type: issue.type as any,
             severity: issue.severity as any,
-            module: module.moduleName,
+            module: vbaModule.moduleName,
             line: parseInt(issue.location.cell.replace('Line ', '')),
             message: issue.message,
             suggestion: issue.suggestion,
@@ -159,12 +159,12 @@ export class VBAAnalyzer implements IAnalyzer {
           
           try {
             const fixedCode = await this.vbaService.fixVBACode(
-              module.code,
+              vbaModule.code,
               vbaErrors
             )
             
             // 수정된 코드를 워크북에 적용 (실제 구현 필요)
-            // module.code = fixedCode
+            // vbaModule.code = fixedCode
             fixed += moduleIssues.length
           } catch (error) {
             failed += moduleIssues.length

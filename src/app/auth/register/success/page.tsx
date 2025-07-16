@@ -41,7 +41,7 @@ export default function RegisterSuccessPage() {
               </li>
               <li className="flex items-start">
                 <span className="mr-2 font-semibold">2.</span>
-                "이메일 인증하기" 버튼을 클릭하세요
+                &quot;이메일 인증하기&quot; 버튼을 클릭하세요
               </li>
               <li className="flex items-start">
                 <span className="mr-2 font-semibold">3.</span>

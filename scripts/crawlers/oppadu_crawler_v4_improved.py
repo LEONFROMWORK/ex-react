@@ -68,7 +68,7 @@ def is_excel_related(text):
 
 def crawl_oppadu(start_page=1, end_page=300):
     base_url = "https://www.oppadu.com/qna/list"
-    output_file = "../data/oppadu_improved_qa.jsonl"
+    output_file = "../../data/oppadu_improved_qa_{}.jsonl".format(datetime.now().strftime("%Y%m%d_%H%M"))
     
     for page in range(start_page, end_page+1):
         try:

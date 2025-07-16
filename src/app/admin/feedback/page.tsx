@@ -82,7 +82,7 @@ const typeLabels = {
 const priorityColors = {
   low: 'secondary',
   medium: 'default',
-  high: 'warning',
+  high: 'destructive',
   urgent: 'destructive'
 } as const
 
@@ -476,7 +476,10 @@ export default function AdminFeedbackPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">유형</p>
                   <div className="flex items-center gap-2 mt-1">
-                    {React.createElement(typeIcons[selectedFeedback.type], { className: "h-4 w-4" })}
+                    {(() => {
+                      const Icon = typeIcons[selectedFeedback.type]
+                      return <Icon className="h-4 w-4" />
+                    })()}
                     <span>{typeLabels[selectedFeedback.type]}</span>
                   </div>
                 </div>

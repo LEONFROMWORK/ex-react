@@ -137,7 +137,7 @@ export function QATab() {
           
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              예: "VLOOKUP 함수가 #N/A 오류를 반환하는 이유는?"
+              예: &quot;VLOOKUP 함수가 #N/A 오류를 반환하는 이유는?&quot;
             </div>
             <Button
               onClick={searchMode === 'ask' ? handleSubmit : handleSearch}

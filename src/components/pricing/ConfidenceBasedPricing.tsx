@@ -199,9 +199,9 @@ export function ConfidenceBasedPricing() {
       {/* 신뢰 메시지 */}
       <div className="text-center mt-12 max-w-2xl mx-auto">
         <p className="text-muted-foreground">
-          "우리는 모든 Excel 문제를 해결할 수 없다는 것을 알고 있습니다.<br />
-          하지만 정직하게 노력하고, 공정하게 과금하겠습니다.<br />
-          여러분의 신뢰가 우리의 가장 큰 자산입니다."
+          &quot;우리는 모든 Excel 문제를 해결할 수 없다는 것을 알고 있습니다.&quot;<br />
+          &quot;하지만 정직하게 노력하고, 공정하게 과금하겠습니다.&quot;<br />
+          &quot;여러분의 신뢰가 우리의 가장 큰 자산입니다.&quot;
         </p>
       </div>
     </div>
