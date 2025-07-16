@@ -81,10 +81,15 @@ def crawl_oppadu(start_page=1, end_page=300):
             }
             
             response = requests.get(base_url, params=params)
+            print(f"Page: {page}, Status Code: {response.status_code}") # 디버깅 추가
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # 질문 목록 찾기
             questions = soup.find_all('div', class_='question-item')
+            print(f"Found {len(questions)} questions on page {page}") # 디버깅 추가
+            
+            if not questions:
+                print(response.text[:500]) # 페이지 내용을 출력하여 구조 확인
             
             for q in questions:
                 try:

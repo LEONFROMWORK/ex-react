@@ -1,4 +1,7 @@
 // New API Route using Vertical Slice Architecture
-import { excelAnalysisAPI } from '@/Features/excel-analysis/api/excel-analysis.api'
+import { NextRequest } from 'next/server'
 
-export const POST = excelAnalysisAPI.analyze
+export async function POST(request: NextRequest) {
+  const { excelAnalysisAPI } = await import('@/Features/excel-analysis/api/excel-analysis.api')
+  return await excelAnalysisAPI.analyze(request)
+}

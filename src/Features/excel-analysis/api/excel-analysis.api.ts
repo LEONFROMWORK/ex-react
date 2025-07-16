@@ -95,8 +95,16 @@ export class ExcelAnalysisAPI {
   
   // GET /api/features/excel-analysis/health
   healthCheck = async (req: NextRequest) => {
-    const health = await this.module.healthCheck()
-    return NextResponse.json(health)
+    try {
+      const health = await this.module.healthCheck()
+      return NextResponse.json(health)
+    } catch (error) {
+      console.error('Health check error:', error)
+      return NextResponse.json(
+        { status: 'error', message: 'Health check failed' },
+        { status: 500 }
+      )
+    }
   }
 }
 
