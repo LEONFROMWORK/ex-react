@@ -10,7 +10,7 @@
 
 ### 2. 서비스 설정
 - **Name**: exhell-app
-- **Region**: Singapore (아시아 최적화)
+- **Region**: Oregon (미국 서부)
 - **Branch**: main
 - **Runtime**: Node
 - **Build Command**: `npm install && npm run build`
@@ -37,7 +37,7 @@ SIGNUP_BONUS_TOKENS=100
 ### 4. PostgreSQL 데이터베이스 생성
 1. "New" → "PostgreSQL" 클릭
 2. Name: `exhell-db`
-3. Region: Singapore
+3. Region: Oregon
 4. 생성 후 연결 문자열 복사
 
 ### 5. 데이터베이스 마이그레이션

@@ -3,7 +3,7 @@ services:
   - type: web
     name: exhell-app
     runtime: node
-    region: singapore # 아시아 지역 최적화
+    region: oregon # 미국 서부 지역
     plan: free # starter, standard, pro 중 선택
     buildCommand: npm install && npm run build
     startCommand: npm start
@@ -63,7 +63,7 @@ databases:
   - name: exhell-db
     databaseName: exhell_prod
     user: exhell_user
-    region: singapore
+    region: oregon
     plan: free # starter, standard, pro 중 선택
     
     # 백업 설정 (유료 플랜에서만 사용 가능)
