@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>테스트 로그인 - Exhell</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .user-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .user-card:hover {
+            border-color: #0070f3;
+            background: #f8f9fa;
+        }
+        .user-card.selected {
+            border-color: #0070f3;
+            background: #e6f2ff;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .btn:hover { background: #0051cc; }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Exhell 테스트 로그인</h1>
+        <div id="users">
+            <div class="user-card" onclick="selectUser('user-1', this)">
+                <h3>Test User</h3>
+                <p>test@example.com</p>
+                <small>일반 사용자 - 파일 업로드, 오류 수정 가능</small>
+            </div>
+            <div class="user-card" onclick="selectUser('admin-1', this)">
+                <h3>Admin User</h3>
+                <p>admin@example.com</p>
+                <small>관리자 - 모든 기능 사용 가능</small>
+            </div>
+        </div>
+        <button class="btn" id="loginBtn" disabled onclick="login()">
+            계정을 선택하세요
+        </button>
+    </div>
+    <script>
+        let selectedUser = null;
+        
+        function selectUser(userId, element) {
+            selectedUser = userId;
+            document.querySelectorAll('.user-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            document.getElementById('loginBtn').disabled = false;
+            document.getElementById('loginBtn').textContent = '로그인';
+        }
+        
+        function login() {
+            if (!selectedUser) return;
+            
+            const userData = {
+                'user-1': {
+                    id: 'user-1',
+                    email: 'test@example.com',
+                    name: 'Test User',
+                    role: '일반 사용자',
+                    tokens: 100
+                },
+                'admin-1': {
+                    id: 'admin-1',
+                    email: 'admin@example.com',
+                    name: 'Admin User',
+                    role: '관리자',
+                    tokens: 1000
+                }
+            };
+            
+            localStorage.setItem('testUser', JSON.stringify(userData[selectedUser]));
+            window.location.href = '/dashboard.html';
+        }
+    </script>
+</body>
+</html>
