@@ -39,7 +39,7 @@ export default function SignupPage() {
         referralCode: referralCode || undefined,
       }
       
-      const response = await axios.post("/api/auth/signup", signupData)
+      const response = await axios.post("/api/auth/register", signupData)
 
       if (response.data.success) {
         toast({
