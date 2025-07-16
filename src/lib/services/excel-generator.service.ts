@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs'
-import { AIService } from './ai.service'
+import { createAIService, AIService } from './ai.service'
 import { z } from 'zod'
 
 const templateSchema = z.object({
@@ -42,13 +42,23 @@ interface GeneratedExcel {
 }
 
 export class ExcelGeneratorService {
-  private aiService: AIService
+  private aiService: AIService | null = null
   private templates: Map<string, ExcelTemplate>
 
   constructor() {
-    this.aiService = new AIService()
+    // AI Service is initialized lazily when needed
     this.templates = new Map()
     this.initializeTemplates()
+  }
+
+  /**
+   * Lazy initialization of AI Service
+   */
+  private getAIService(): AIService {
+    if (!this.aiService) {
+      this.aiService = createAIService()
+    }
+    return this.aiService
   }
 
   /**
@@ -238,8 +248,9 @@ export class ExcelGeneratorService {
     `
     
     try {
-      const result = await this.aiService.analyzeWithAI(aiPrompt, 'high')
-      const structure = JSON.parse(result)
+      const aiService = this.getAIService()
+      const result = await aiService.generateJSON(aiPrompt)
+      const structure = result
       
       for (const sheetConfig of structure.sheets) {
         const worksheet = workbook.addWorksheet(sheetConfig.name)

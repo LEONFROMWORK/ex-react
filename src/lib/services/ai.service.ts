@@ -181,6 +181,16 @@ export class MockAIService extends AIService {
 
 // Factory function for creating AI service instances
 export function createAIService(provider?: 'openai' | 'anthropic'): AIService {
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    // In browser, always use mock service for now
+    return new MockAIService({
+      provider: 'openai',
+      apiKey: 'mock-key'
+    })
+  }
+
+  // Server-side only
   // Mock 모드 확인
   if (process.env.USE_MOCK_AI === 'true') {
     return new MockAIService({
