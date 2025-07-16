@@ -2,9 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { ExcelAnalysisModule } from '../excel-analysis.module'
-import { withAuth } from '@/features/shared/middleware/auth.middleware'
-import { withValidation } from '@/features/shared/middleware/validation.middleware'
-import { withErrorHandler } from '@/features/shared/middleware/error.middleware'
+import { withAuth } from '@/Features/shared/middleware/auth.middleware'
+import { withValidation } from '@/Features/shared/middleware/validation.middleware'
+import { withErrorHandler } from '@/Features/shared/middleware/error.middleware'
 
 // Request/Response schemas
 const analyzeRequestSchema = z.object({
