@@ -43,6 +43,9 @@ Thumbs.db
 uploads/
 temp/
 
+# Data directory
+data/
+
 # Database
 *.db
 *.sqlite
