@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { GenerateFromPromptHandler } from '@/Features/ExcelGeneration/GenerateFromPrompt/GenerateFromPrompt'
 import { ExcelStreamBuilderService } from '@/Services/Stream/ExcelStreamBuilderService'
 import { getProgressService } from '@/Services/WebSocket/WebSocketProgressService'
@@ -9,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session) {
       return NextResponse.json(
         { error: '로그인이 필요합니다' },

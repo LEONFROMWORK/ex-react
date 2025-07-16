@@ -1,7 +1,6 @@
 import { UserRole, USER_ROLES, ROLE_PERMISSIONS, ADMIN_MENU_ACCESS } from '@/lib/constants/user-roles'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/auth'
+import { auth } from '@/lib/auth'
 
 export class AuthPermissionService {
   private static instance: AuthPermissionService
@@ -57,7 +56,7 @@ export class AuthPermissionService {
   
   // 서버 사이드 권한 확인
   async checkServerPermission(permission: keyof typeof ROLE_PERMISSIONS.USER): Promise<boolean> {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) return false
     
     const role = await this.getUserRole(session.user.id)
@@ -66,7 +65,7 @@ export class AuthPermissionService {
   
   // 서버 사이드 관리자 권한 확인
   async isAdmin(): Promise<boolean> {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) return false
     
     const role = await this.getUserRole(session.user.id)
@@ -75,7 +74,7 @@ export class AuthPermissionService {
   
   // 서버 사이드 최고 관리자 권한 확인
   async isSuperAdmin(): Promise<boolean> {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) return false
     
     const role = await this.getUserRole(session.user.id)

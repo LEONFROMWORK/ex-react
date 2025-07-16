@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/auth'
+import { auth } from '@/lib/auth'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -14,7 +13,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     // 로그인 확인
     if (!session?.user) {
@@ -79,7 +78,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     // 관리자만 수정 가능
     if (!session?.user || !['ADMIN', 'SUPER_ADMIN', 'SUPPORT'].includes(session.user.role || '')) {
@@ -131,7 +130,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     // 관리자만 삭제 가능
     if (!session?.user || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {

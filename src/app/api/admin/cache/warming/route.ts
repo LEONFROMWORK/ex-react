@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { getCacheWarmingService } from '@/Services/Cache/CacheWarmingService'
 
 // POST: 캐시 워밍 시작
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인 (관리자만 접근 가능)
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { error: '권한이 없습니다' },
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // 인증 확인 (관리자만 접근 가능)
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { error: '권한이 없습니다' },
@@ -78,7 +77,7 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // 인증 확인 (관리자만 접근 가능)
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { error: '권한이 없습니다' },

@@ -1,3 +1,5 @@
+import { AnalysisModule, AnalysisItem, AnalysisOptions } from './index'
+
 export interface CircularReferenceCheck {
   hasCircularReference: boolean
   circularReferences: Array<{
@@ -15,5 +17,18 @@ export function checkCircularReferences(formulaCells: any[]): CircularReferenceC
   return {
     hasCircularReference: circularReferences.length > 0,
     circularReferences
+  }
+}
+
+export class CircularReferenceModule implements AnalysisModule {
+  name = 'Circular Reference Detector'
+  type = 'error' as const
+
+  async analyze(workbook: any, options?: AnalysisOptions): Promise<AnalysisItem[]> {
+    const results: AnalysisItem[] = []
+    
+    // TODO: 실제 순환 참조 분석 로직 구현
+    
+    return results
   }
 }

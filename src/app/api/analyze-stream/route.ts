@@ -4,7 +4,7 @@ import { StreamingProcessor, createStreamingResponse } from '@/lib/performance/s
 import { circuitBreakers } from '@/lib/performance/circuit-breaker'
 import { analysisCache } from '@/lib/performance/cache-manager'
 
-export const runtime = 'edge' // Edge Runtime 사용
+export const runtime = 'nodejs' // Node.js Runtime for Redis access
 
 export async function POST(request: NextRequest) {
   // Circuit Breaker 적용

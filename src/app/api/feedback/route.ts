@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/auth'
+import { auth } from '@/lib/auth'
 import { z } from 'zod'
 import { writeFile } from 'fs/promises'
 import path from 'path'
@@ -22,7 +21,7 @@ const feedbackSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     // 폼데이터 파싱
     const formData = await request.formData()
@@ -132,7 +131,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     // 관리자만 피드백 목록 조회 가능
     if (!session?.user || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {

@@ -7,3 +7,5 @@ export class FormulaOptimizerAnalyzer {
     }
   }
 }
+
+export { FormulaOptimizerAnalyzer as FormulaOptimizer }
