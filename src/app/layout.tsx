@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Providers } from "./providers"
 // TailwindCDN removed - using built-in Tailwind CSS
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { AuthenticatedLayout } from "@/components/layouts/AuthenticatedLayout"
 import Script from 'next/script'
 
 const inter = Inter({ subsets: ["latin"] })
@@ -47,7 +48,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ErrorBoundary>
           <Providers>
-            {children}
+            <AuthenticatedLayout>
+              {children}
+            </AuthenticatedLayout>
             <Toaster />
           </Providers>
         </ErrorBoundary>
