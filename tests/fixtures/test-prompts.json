@@ -1,0 +1,63 @@
+{
+  "prompts": [
+    {
+      "id": "sales-report",
+      "prompt": "2024년 월간 매출 보고서를 만들어줘. 제품별(A, B, C) 매출액, 판매 수량, 전월 대비 성장률을 포함해줘.",
+      "expectedColumns": ["월", "제품A 매출", "제품B 매출", "제품C 매출", "총 매출", "성장률"]
+    },
+    {
+      "id": "inventory-tracker",
+      "prompt": "재고 관리 시스템을 만들어줘. 제품명, 현재 재고, 최소 재고, 재주문 필요 여부를 표시해줘.",
+      "expectedColumns": ["제품 ID", "제품명", "현재 재고", "최소 재고", "재주문 필요"]
+    },
+    {
+      "id": "project-timeline",
+      "prompt": "프로젝트 일정표를 만들어줘. 작업명, 시작일, 종료일, 담당자, 진행률을 포함해줘.",
+      "expectedColumns": ["작업 ID", "작업명", "시작일", "종료일", "담당자", "진행률", "상태"]
+    },
+    {
+      "id": "budget-planner",
+      "prompt": "월간 예산 계획표를 만들어줘. 수입, 고정비, 변동비, 저축을 카테고리별로 정리해줘.",
+      "expectedColumns": ["카테고리", "항목", "계획 금액", "실제 금액", "차이", "비율"]
+    },
+    {
+      "id": "employee-timesheet",
+      "prompt": "직원 근태 관리표를 만들어줘. 날짜별 출근/퇴근 시간, 근무 시간, 초과 근무를 기록해줘.",
+      "expectedColumns": ["날짜", "직원명", "출근 시간", "퇴근 시간", "근무 시간", "초과 근무", "비고"]
+    }
+  ],
+  "invalidPrompts": [
+    {
+      "id": "too-short",
+      "prompt": "엑셀",
+      "expectedError": "프롬프트는 최소 10자 이상이어야 합니다."
+    },
+    {
+      "id": "unclear",
+      "prompt": "뭔가 만들어줘",
+      "expectedError": "더 구체적인 정보를 포함해주세요."
+    }
+  ],
+  "templates": [
+    {
+      "id": "financial-report",
+      "data": {
+        "year": 2024,
+        "month": "1월",
+        "revenue": 5000000,
+        "expenses": 3000000,
+        "previousRevenue": 4500000
+      }
+    },
+    {
+      "id": "sales-dashboard",
+      "data": {
+        "products": ["제품A", "제품B", "제품C"],
+        "salesData": [
+          { "month": "1월", "productA": 100, "productB": 80, "productC": 120 },
+          { "month": "2월", "productA": 110, "productB": 90, "productC": 130 }
+        ]
+      }
+    }
+  ]
+}

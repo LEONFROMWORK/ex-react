@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = env("DATABASE_PROVIDER")
   url      = env("DATABASE_URL")
 }
 
@@ -16,15 +16,24 @@ model User {
   password        String
   name            String
   emailVerified   DateTime?
+  emailVerificationToken String?
+  emailVerificationExpires DateTime?
   role            Role      @default(USER)
+  tier            String?   @default("FREE")
+  tierUpdatedAt   DateTime?
   tokens          Int       @default(100)
   referralCode    String    @unique
   referredBy      String?
   aiPreference    AITier    @default(ECONOMY)
-  preferences     Json?
+  preferences     String?
   customerKey     String?   @unique
+  tenantId        String    @default("default")
+  metadata        String?
+  lastActiveAt    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  
+  @@index([tenantId])
   
   profile         Profile?
   subscription    Subscription?
@@ -41,6 +50,15 @@ model User {
   aiUsageStats    AIUsageStats?
   errorPatterns   ErrorPattern[]
   errorFailures   ErrorResolutionFailure[]
+  fineTuningData  FineTuningData[]
+  tierHistory     TierHistory[]
+  tokenTransactions TokenTransaction[]
+  auditLogs       AuditLog[] @relation("AuditLogUser")
+  adminLogs       AdminLog[] @relation("AdminLogUser")
+  payments        Payment[]
+  feedbacks       Feedback[]
+  feedbackResponses Feedback[] @relation("FeedbackResponder")
+  fileVersions    FileVersion[] @relation("FileVersionCreator")
 }
 
 model Profile {
@@ -69,6 +87,7 @@ model File {
   mimeType        String
   uploadUrl       String
   status          FileStatus @default(PENDING)
+  currentVersion  Int       @default(1)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -77,15 +96,16 @@ model File {
   corrections     Correction[]
   errorPatterns   ErrorPattern[]
   errorFailures   ErrorResolutionFailure[]
+  versions        FileVersion[]
 }
 
 model Analysis {
   id              String    @id @default(cuid())
   fileId          String
   userId          String
-  errors          Json
-  corrections     Json
-  report          Json
+  errors          String
+  corrections     String
+  report          String
   
   // AI 분석 정보
   aiTier          AITier    @default(TIER1)
@@ -94,7 +114,7 @@ model Analysis {
   promptTokens    Int
   completionTokens Int
   estimatedCost   Float
-  processingPath  Json      // 분석 경로 기록
+  processingPath  String      // 분석 경로 기록
   
   createdAt       DateTime  @default(now())
   
@@ -107,6 +127,7 @@ model ChatConversation {
   id              String    @id @default(cuid())
   userId          String
   title           String
+  tenantId        String?   // Optional tenant ID for multi-tenant support
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -121,7 +142,16 @@ model ChatMessage {
   content         String
   tokensUsed      Int?
   aiTier          String?   // "TIER1" | "TIER2"
-  attachments     Json?
+  modelUsed       String?   // Model name (e.g., "gpt-4", "claude-3")
+  attachments     String?
+  
+  // 파인튜닝 데이터 수집용 필드
+  userRating      Int?      // 1-5 별점
+  wasHelpful      Boolean?  // 도움이 되었는지
+  functionCalls   String?     // AI가 사용한 함수들
+  feedbackText    String?   // 사용자의 텍스트 피드백
+  correctedResponse String? // 사용자가 수정한 응답
+  
   createdAt       DateTime  @default(now())
   
   conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -151,7 +181,7 @@ model Transaction {
   description     String
   status          TransactionStatus @default(PENDING)
   paymentKey      String?
-  metadata        Json?
+  metadata        String?
   createdAt       DateTime  @default(now())
   
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -231,7 +261,7 @@ model Correction {
   userId          String
   analysisId      String
   
-  corrections     Json      // Details of all corrections
+  corrections     String      // Details of all corrections
   correctedFileUrl String?  // URL of corrected file
   
   status          CorrectionStatus @default(PENDING)
@@ -240,7 +270,7 @@ model Correction {
   
   aiModel         String?
   confidence      Float?
-  metadata        Json?     // Additional metadata
+  metadata        String?     // Additional metadata
   
   createdAt       DateTime  @default(now())
   
@@ -257,7 +287,7 @@ model AIPromptCache {
   id              String    @id @default(cuid())
   promptHash      String    @unique
   model           String
-  response        Json
+  response        String
   confidence      Float
   tokensUsed      Int
   createdAt       DateTime  @default(now())
@@ -275,7 +305,7 @@ model PaymentIntent {
   subscriptionPlan String?
   billingPeriod   String?
   paymentKey      String?
-  metadata        Json?
+  metadata        String?
   createdAt       DateTime  @default(now())
   completedAt     DateTime?
   failedAt        DateTime?
@@ -288,7 +318,7 @@ model UsageLog {
   id              String    @id @default(cuid())
   userId          String
   feature         String
-  metadata        Json?
+  metadata        String?
   createdAt       DateTime  @default(now())
   
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -296,6 +326,7 @@ model UsageLog {
 
 enum Role {
   USER
+  SUPPORT
   ADMIN
   SUPER_ADMIN
 }
@@ -360,8 +391,30 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   CANCELED
+  REFUNDED
   PARTIALLY_REFUNDED
   EXPIRED
+}
+
+model Payment {
+  id              String    @id @default(cuid())
+  userId          String
+  amount          Int
+  currency        String    @default("KRW")
+  tier            String?   // 구매한 티어
+  status          String    // PENDING, COMPLETED, FAILED, REFUNDED
+  paymentKey      String?   @unique
+  orderId         String    @unique
+  method          String?   // 결제 방법
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 enum CorrectionStatus {
@@ -392,10 +445,89 @@ model AdminLog {
   action          String
   targetType      String    // user, review, payment, etc.
   targetId        String?
-  metadata        Json?
+  metadata        String?
   ipAddress       String?
   userAgent       String?
   createdAt       DateTime  @default(now())
+  
+  admin           User      @relation("AdminLogUser", fields: [adminId], references: [id])
+}
+
+model AuditLog {
+  id              String    @id @default(cuid())
+  userId          String
+  action          String
+  targetId        String?
+  details         Json?
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation("AuditLogUser", fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model TierHistory {
+  id              String    @id @default(cuid())
+  userId          String
+  fromTier        String
+  toTier          String
+  reason          String
+  changedBy       String
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model TokenTransaction {
+  id              String    @id @default(cuid())
+  userId          String
+  amount          Int
+  type            String    // EARNED, SPENT, PURCHASED, REFUNDED, ADJUSTED
+  reason          String
+  balance         Int       // 거래 후 잔액
+  relatedId       String?   // 관련 엔티티 ID (예: 파일 ID, 결제 ID)
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model AnalysisJob {
+  id              String    @id @default(cuid())
+  fileId          String
+  userId          String
+  status          String    // PENDING, PROCESSING, COMPLETED, FAILED
+  processingTime  Int?      // 처리 시간 (밀리초)
+  error           String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ErrorFix {
+  id              String    @id @default(cuid())
+  fileId          String
+  userId          String
+  errorType       String
+  status          String    // PENDING, COMPLETED, FAILED
+  fixDetails      Json?
+  createdAt       DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 enum AnnouncementType {
@@ -414,12 +546,12 @@ model ErrorPattern {
   errorMessage    String
   cellLocation    String?
   sheetName       String?
-  errorContext    Json?     // 오류 주변 컨텍스트 정보
+  errorContext    String?     // 오류 주변 컨텍스트 정보
   
   // 해결 정보
   resolved        Boolean   @default(false)
   resolutionType  String?   // AI, MANUAL, PARTIAL, FAILED
-  resolutionDetails Json?
+  resolutionDetails String?
   resolutionTime  Int?      // 해결에 걸린 시간 (초)
   
   // 분류 정보
@@ -449,10 +581,10 @@ model ErrorResolutionFailure {
   userId          String
   
   failureReason   String
-  failureDetails  Json?
-  attemptedMethods Json?    // 시도한 해결 방법들
+  failureDetails  String?
+  attemptedMethods String?    // 시도한 해결 방법들
   
-  errorSnapshot   Json      // 오류 상태 스냅샷
+  errorSnapshot   String      // 오류 상태 스냅샷
   userFeedback    String?
   
   createdAt       DateTime  @default(now())
@@ -480,7 +612,7 @@ model ReferralReward {
   cashAwarded     Float     @default(0)
   
   triggerEvent    String    // 보상을 트리거한 이벤트
-  triggerDetails  Json?     // 이벤트 상세 정보
+  triggerDetails  String?     // 이벤트 상세 정보
   
   status          String    @default("PENDING") // PENDING, COMPLETED, FAILED
   completedAt     DateTime?
@@ -492,4 +624,194 @@ model ReferralReward {
   @@index([referrerId])
   @@index([refereeId])
   @@index([status])
+}
+
+model FineTuningData {
+  id            String   @id @default(cuid())
+  userId        String
+  sessionId     String?
+  
+  // 대화 내용
+  userQuery     String   
+  systemPrompt  String?  
+  aiResponse    String   
+  
+  // Function Calling 데이터
+  functionCalls String?    // [{name, arguments, result}]
+  
+  // 품질 평가
+  userRating    Int?     // 1-5 점수
+  isHelpful     Boolean?
+  wasEdited     Boolean  @default(false)
+  editedResponse String? 
+  
+  // 메타데이터
+  responseTime  Int      // 밀리초
+  tokenCount    Int
+  modelUsed     String
+  errorOccurred Boolean  @default(false)
+  
+  // 학습 데이터 관리
+  qualityScore  Float?   // 자동 계산된 품질 점수
+  isValidated   Boolean  @default(false)
+  includedInDataset String? // 데이터셋 버전
+  
+  // Excel 관련 컨텍스트
+  excelContext  String?    // 처리한 Excel 파일 정보
+  taskType      String?  // CREATE, CORRECT, ANALYZE, OPTIMIZE
+  
+  createdAt     DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([qualityScore])
+  @@index([createdAt])
+  @@index([taskType])
+}
+
+model AIModelConfig {
+  id            String   @id @default(cuid())
+  provider      String   // openai, gemini, claude, llama, groq
+  apiKey        String?   // 암호화 저장
+  endpoint      String?  // 자체 호스팅 모델용
+  modelName     String   // gpt-4, gemini-pro, claude-3, llama2-70b
+  isActive      Boolean  @default(false)
+  isDefault     Boolean  @default(false)
+  
+  // 모델별 설정
+  maxTokens     Int      @default(2000)
+  temperature   Float    @default(0.7)
+  costPerToken  Float    // 토큰당 비용 (USD)
+  
+  // 사용 조건
+  taskTypes     String[] // CREATE, CORRECT, ANALYZE 등
+  complexity    String[] // simple, complex
+  priority      Int      @default(0) // 우선순위 (높을수록 우선)
+  
+  // 메타데이터
+  displayName   String   // UI 표시명
+  description   String?  // 모델 설명
+  capabilities  String?    // 모델 특징 및 능력
+  tenantId      String   @default("default")
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // 관계
+  usageLogs     AIModelUsageLog[]
+  
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([provider])
+  @@index([isActive])
+  @@index([priority])
+}
+
+model AIModelPolicy {
+  id            String   @id @default(cuid())
+  name          String   
+  description   String?
+  
+  // 자동 선택 규칙
+  selectionMode String   @default("auto") // auto, manual, experiment
+  costLimit     Float?   // 일일 비용 한도 (USD)
+  
+  // 정책 규칙 (JSON)
+  rules         String   // 복잡한 규칙 정의 (JSON)
+  tenantId      String   @default("default")
+  
+  @@unique([name, tenantId])
+  @@index([tenantId])
+  // 예: {
+  //   "preferredProviders": ["openai", "gemini"],
+  //   "fallbackChain": ["gemini", "claude", "llama"],
+  //   "taskMapping": {
+  //     "CREATE": ["gemini", "openai"],
+  //     "ANALYZE": ["claude", "openai"]
+  //   }
+  // }
+  
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AIModelUsageLog {
+  id            String   @id @default(cuid())
+  modelConfigId String
+  userId        String
+  
+  // 사용 정보
+  promptTokens  Int
+  completionTokens Int
+  totalTokens   Int
+  cost          Float    // 실제 비용 (USD)
+  
+  // 성능 메트릭
+  latency       Int      // 응답 시간 (ms)
+  success       Boolean
+  errorMessage  String?
+  
+  // 컨텍스트
+  taskType      String?
+  userRating    Int?     // 1-5
+  
+  createdAt     DateTime @default(now())
+  
+  modelConfig   AIModelConfig @relation(fields: [modelConfigId], references: [id])
+  
+  @@index([modelConfigId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Feedback {
+  id             String   @id @default(cuid())
+  type           String   // bug, feature, improvement, other
+  priority       String   // low, medium, high, urgent
+  subject        String
+  description    String   @db.Text
+  email          String?
+  userId         String?
+  status         String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  metadata       Json?
+  screenshotPath String?
+  response       String?  @db.Text
+  respondedBy    String?
+  respondedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user        User? @relation(fields: [userId], references: [id])
+  responder   User? @relation("FeedbackResponder", fields: [respondedBy], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([type])
+}
+
+model FileVersion {
+  id             String   @id @default(cuid())
+  fileId         String
+  versionNumber  Int
+  fileName       String
+  fileSize       Int
+  checksum       String
+  storageUrl     String
+  changes        String?  @db.Text
+  createdBy      String
+  tags           String[]
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  
+  file           File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdByUser  User     @relation("FileVersionCreator", fields: [createdBy], references: [id])
+  
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+  @@index([createdBy])
+  @@index([createdAt])
 }

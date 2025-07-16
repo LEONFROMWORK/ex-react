@@ -1,79 +1,57 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth-helper"
-import { RejectReviewHandler, RejectReviewRequestSchema } from "@/Features/Admin/ReviewManagement/RejectReview"
-import { ValidateAdminAccessHandler, hasAdminPermission } from "@/Features/Admin/AdminAuth/ValidateAdminAccess"
+import { getServerSession } from '@/lib/auth/session'
+import { prisma } from "@/lib/prisma"
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { reviewId: string } }
 ) {
   try {
-    // Check authentication
     const session = await getServerSession()
     if (!session) {
-      return NextResponse.json(
-        { error: "인증이 필요합니다" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 })
     }
 
-    // Validate admin access
-    const accessValidator = new ValidateAdminAccessHandler()
-    const accessResult = await accessValidator.handle({
-      userId: session.user.id,
-      role: session.user.role,
-      requestPath: "/api/admin/reviews/reject",
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { reason } = body
+
+    const review = await prisma.review.findUnique({
+      where: { id: params.reviewId }
     })
 
-    if (!accessResult.isSuccess || !accessResult.value.isAllowed) {
-      return NextResponse.json(
-        { error: "권한이 없습니다" },
-        { status: 403 }
-      )
+    if (!review) {
+      return NextResponse.json({ error: "리뷰를 찾을 수 없습니다" }, { status: 404 })
     }
 
-    // Check specific permission
-    if (!hasAdminPermission(accessResult.value.permissions, "reviews", "update")) {
-      return NextResponse.json(
-        { error: "리뷰 거절 권한이 없습니다" },
-        { status: 403 }
-      )
+    if (review.status !== 'PENDING') {
+      return NextResponse.json({ error: "대기 중인 리뷰만 거절할 수 있습니다" }, { status: 400 })
     }
 
-    // Get request body
-    const body = await request.json()
-    const requestData = {
-      reviewId: params.reviewId,
-      adminId: session.user.id,
-      ...body,
-    }
+    const updatedReview = await prisma.review.update({
+      where: { id: params.reviewId },
+      data: { status: 'REJECTED' }
+    })
 
-    // Validate request
-    const validationResult = RejectReviewRequestSchema.safeParse(requestData)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "잘못된 요청입니다", details: validationResult.error },
-        { status: 400 }
-      )
-    }
+    await prisma.adminLog.create({
+      data: {
+        adminId: session.user.id,
+        action: 'REJECT_REVIEW',
+        targetType: 'review',
+        targetId: params.reviewId,
+        metadata: reason ? JSON.stringify({ reason }) : null
+      }
+    })
 
-    // Reject review
-    const handler = new RejectReviewHandler()
-    const result = await handler.handle(validationResult.data)
-
-    if (!result.isSuccess) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(result.value)
+    return NextResponse.json({
+      success: true,
+      review: updatedReview
+    })
   } catch (error) {
-    console.error("Reject review API error:", error)
-    return NextResponse.json(
-      { error: "서버 오류가 발생했습니다" },
-      { status: 500 }
-    )
+    console.error("Review rejection error:", error)
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 })
   }
 }

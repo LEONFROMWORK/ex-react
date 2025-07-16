@@ -1,79 +1,65 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth-helper"
-import { ProcessRefundHandler, ProcessRefundRequestSchema } from "@/Features/Admin/Payments/ProcessRefund"
-import { ValidateAdminAccessHandler, hasAdminPermission } from "@/Features/Admin/AdminAuth/ValidateAdminAccess"
+import { getServerSession } from '@/lib/auth/session'
+import { prisma } from "@/lib/prisma"
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { paymentId: string } }
 ) {
   try {
-    // Check authentication
     const session = await getServerSession()
     if (!session) {
-      return NextResponse.json(
-        { error: "인증이 필요합니다" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 })
     }
 
-    // Validate admin access
-    const accessValidator = new ValidateAdminAccessHandler()
-    const accessResult = await accessValidator.handle({
-      userId: session.user.id,
-      role: session.user.role,
-      requestPath: "/api/admin/payments/refund",
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { amount, reason } = body
+
+    const payment = await prisma.paymentIntent.findUnique({
+      where: { id: params.paymentId }
     })
 
-    if (!accessResult.isSuccess || !accessResult.value.isAllowed) {
-      return NextResponse.json(
-        { error: "권한이 없습니다" },
-        { status: 403 }
-      )
+    if (!payment) {
+      return NextResponse.json({ error: "결제를 찾을 수 없습니다" }, { status: 404 })
     }
 
-    // Check specific permission
-    if (!hasAdminPermission(accessResult.value.permissions, "payments", "refund")) {
-      return NextResponse.json(
-        { error: "환불 처리 권한이 없습니다" },
-        { status: 403 }
-      )
+    if (payment.status !== 'COMPLETED') {
+      return NextResponse.json({ error: "완료된 결제만 환불할 수 있습니다" }, { status: 400 })
     }
 
-    // Get request body
-    const body = await request.json()
-    const requestData = {
-      paymentId: params.paymentId,
-      adminId: session.user.id,
-      ...body,
-    }
+    // Update payment status
+    const updatedPayment = await prisma.paymentIntent.update({
+      where: { id: params.paymentId },
+      data: {
+        status: amount === payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+        metadata: JSON.stringify({
+          ...JSON.parse(payment.metadata || '{}'),
+          refund: { amount, reason, processedBy: session.user.id, processedAt: new Date() }
+        })
+      }
+    })
 
-    // Validate request
-    const validationResult = ProcessRefundRequestSchema.safeParse(requestData)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "잘못된 요청입니다", details: validationResult.error },
-        { status: 400 }
-      )
-    }
+    // Log admin action
+    await prisma.adminLog.create({
+      data: {
+        adminId: session.user.id,
+        action: 'PROCESS_REFUND',
+        targetType: 'payment',
+        targetId: params.paymentId,
+        metadata: JSON.stringify({ amount, reason })
+      }
+    })
 
-    // Process refund
-    const handler = new ProcessRefundHandler()
-    const result = await handler.handle(validationResult.data)
-
-    if (!result.isSuccess) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(result.value)
+    return NextResponse.json({
+      success: true,
+      payment: updatedPayment
+    })
   } catch (error) {
-    console.error("Process refund API error:", error)
-    return NextResponse.json(
-      { error: "서버 오류가 발생했습니다" },
-      { status: 500 }
-    )
+    console.error("Refund API error:", error)
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 })
   }
 }

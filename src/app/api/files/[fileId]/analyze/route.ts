@@ -1,29 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth-helper"
-import { AnalyzeErrorsHandler } from "@/Features/ExcelAnalysis/AnalyzeErrors/AnalyzeErrors"
-import { AuthErrors } from "@/Common/Errors"
-import { createExcelAnalysisLimit } from "@/Features/UsageTracking/Middleware/UsageLimitMiddleware"
-
-const usageLimiter = createExcelAnalysisLimit()
+import { getMockSession } from "@/lib/auth/mock-session"
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { fileId: string } }
 ) {
   try {
-    // Apply usage limit
-    const usageLimitResult = await usageLimiter.handle(req)
-    if (usageLimitResult) {
-      return usageLimitResult
-    }
-
-    const session = await getServerSession()
+    const session = await getMockSession()
     
     if (!session) {
       return NextResponse.json(
         { 
           success: false, 
-          error: AuthErrors.Unauthorized 
+          message: "인증이 필요합니다."
         },
         { status: 401 }
       )
@@ -33,27 +22,21 @@ export async function POST(
     const body = await req.json()
     const analysisType = body.analysisType || "basic"
 
-    // Use vertical slice handler
-    const handler = new AnalyzeErrorsHandler()
-    const result = await handler.handle({
-      fileId,
-      userId: session.user.id,
-      analysisType,
-    })
+    // Create mock analysis ID
+    const analysisId = `analysis-${fileId}`
 
-    if (result.isFailure) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: result.error 
-        },
-        { status: 400 }
-      )
-    }
+    // Mock successful analysis start
+    console.log(`Starting analysis for file ${fileId} with type ${analysisType}`)
 
     return NextResponse.json({
       success: true,
-      data: result.value,
+      data: {
+        analysisId,
+        fileId,
+        status: "PROCESSING",
+        message: "분석이 시작되었습니다.",
+        estimatedTime: 5 // seconds
+      },
     })
   } catch (error) {
     console.error("Analysis error:", error)

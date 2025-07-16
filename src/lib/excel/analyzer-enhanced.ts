@@ -2,6 +2,23 @@ import ExcelJS from "exceljs"
 import { ExcelError, ErrorType, AnalysisResult } from "@/types/excel"
 import { FormulaEngine } from "./formula-engine"
 
+export async function analyzeExcelFile(fileBuffer: Buffer): Promise<AnalysisResult> {
+  const analyzer = new EnhancedExcelAnalyzer()
+  const tempPath = `/tmp/excel-${Date.now()}.xlsx`
+  
+  // Write buffer to temp file
+  const fs = require('fs').promises
+  await fs.writeFile(tempPath, fileBuffer)
+  
+  try {
+    const result = await analyzer.analyzeFile(tempPath)
+    return result
+  } finally {
+    // Clean up temp file
+    await fs.unlink(tempPath).catch(() => {})
+  }
+}
+
 export class EnhancedExcelAnalyzer {
   private workbook: ExcelJS.Workbook | null = null
   private formulaEngine: FormulaEngine

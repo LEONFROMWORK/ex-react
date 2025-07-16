@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from '@/lib/auth/session'
 import { TrackUsageHandler, TrackUsageValidator } from "../TrackUsage/TrackUsage"
 import { ConsumeTokensHandler, ConsumeTokensValidator } from "@/Features/Billing/TokenManagement/ConsumeTokens"
 
@@ -16,7 +15,7 @@ export class UsageLimitMiddleware {
   async handle(req: NextRequest): Promise<NextResponse | null> {
     try {
       // Get user session
-      const session = await getServerSession(authOptions)
+      const session = await getServerSession()
       if (!session?.user?.id) {
         return NextResponse.json(
           { error: "Unauthorized" },

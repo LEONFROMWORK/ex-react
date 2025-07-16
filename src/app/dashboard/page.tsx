@@ -1,25 +1,98 @@
-import { getServerSession } from "@/lib/auth-helper"
-import { authOptions } from "@/lib/auth"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileSpreadsheet, Upload, History, CreditCard } from "lucide-react"
+import { FileSpreadsheet, Upload, History, CreditCard, LogOut, Zap, Files } from "lucide-react"
 import Link from "next/link"
+import { FileList } from "@/components/dashboard/FileList"
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget"
 
-export default async function DashboardPage() {
-  const session = await getServerSession()
+interface TestUser {
+  id: string
+  email: string
+  name: string
+  role: string
+}
 
-  if (!session) {
-    redirect("/auth/login")
+export default function DashboardPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<TestUser | null>(null)
+  const [files, setFiles] = useState<any[]>([])
+
+  useEffect(() => {
+    // 로컬 스토리지에서 사용자 정보 확인
+    const testUser = localStorage.getItem('testUser')
+    if (!testUser) {
+      router.push("/auth/simple-login")
+      return
+    }
+    
+    setUser(JSON.parse(testUser))
+    
+    // Mock 파일 데이터
+    setFiles([
+      {
+        id: '1',
+        originalName: 'sales_report_2024.xlsx',
+        size: 2457600,
+        status: 'COMPLETED',
+        createdAt: new Date('2024-01-15T10:30:00'),
+        completedAt: new Date('2024-01-15T10:32:45'),
+        errorCount: 45,
+        fixedCount: 42,
+        tokensUsed: 150
+      },
+      {
+        id: '2',
+        originalName: 'inventory_data.xlsx',
+        size: 1843200,
+        status: 'PROCESSING',
+        createdAt: new Date('2024-01-15T14:20:00'),
+        errorCount: undefined,
+        fixedCount: undefined,
+        tokensUsed: undefined
+      },
+      {
+        id: '3',
+        originalName: 'budget_2024_Q1.xlsx',
+        size: 892416,
+        status: 'FAILED',
+        createdAt: new Date('2024-01-14T09:15:00'),
+        completedAt: new Date('2024-01-14T09:16:30'),
+        errorCount: 12,
+        fixedCount: 0,
+        tokensUsed: 45
+      }
+    ])
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem('testUser')
+    router.push("/")
+  }
+
+  if (!user) {
+    return <div>Loading...</div>
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">대시보드</h1>
-        <p className="text-gray-600 mt-2">
-          안녕하세요, {session.user.name}님! 
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold dark:text-white">대시보드</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            안녕하세요, {user.name}님! 
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            {user.email} ({user.role})
+          </p>
+        </div>
+        <Button onClick={handleLogout} variant="outline">
+          <LogOut className="mr-2 h-4 w-4" />
+          로그아웃
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -81,7 +154,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>새 파일 업로드</CardTitle>
@@ -98,21 +171,52 @@ export default async function DashboardPage() {
             </Link>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardHeader>
-            <CardTitle>최근 처리 내역</CardTitle>
+            <CardTitle>Excel 파일 생성</CardTitle>
             <CardDescription>
-              최근에 처리한 파일 목록입니다
+              템플릿이나 AI를 사용하여 새 Excel 파일을 생성하세요
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500 text-center py-8">
-              아직 처리한 파일이 없습니다
-            </p>
+            <Link href="/dashboard/create">
+              <Button className="w-full" size="lg" variant="outline">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                파일 생성
+              </Button>
+            </Link>
           </CardContent>
         </Card>
+
+        <div className="lg:col-span-1">
+          <FileList files={files} onRefresh={() => {
+            // 실제로는 API에서 파일 목록을 다시 가져와야 함
+            console.log('Refresh files')
+          }} />
+        </div>
       </div>
+
+      {user.role === "관리자" && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>관리자 메뉴</CardTitle>
+            <CardDescription>
+              관리자 전용 기능에 접근할 수 있습니다
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin">
+              <Button variant="outline" className="w-full">
+                관리자 대시보드로 이동
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* 피드백 위젯 */}
+      <FeedbackWidget />
     </div>
   )
 }

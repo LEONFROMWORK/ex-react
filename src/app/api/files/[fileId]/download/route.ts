@@ -29,19 +29,19 @@ export async function GET(
 
     if (validationResult.isFailure) {
       return NextResponse.json(
-        { success: false, message: validationResult.error.message },
+        { success: false, message: validationResult.error?.message || "Validation failed" },
         { status: 400 }
       )
     }
 
     // Handle download
     const handler = new DownloadCorrectedFileHandler(new EnhancedExcelAnalyzer())
-    const result = await handler.handle(validationResult.value)
+    const result = await handler.handle(validationResult.value!)
 
     if (result.isFailure) {
       return NextResponse.json(
-        { success: false, message: result.error.message },
-        { status: result.error.code === "FILE_NOT_FOUND" ? 404 : 500 }
+        { success: false, message: result.error?.message || "Request failed" },
+        { status: result.error?.code === "FILE_NOT_FOUND" ? 404 : 500 }
       )
     }
 

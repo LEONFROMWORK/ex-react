@@ -48,6 +48,14 @@ temp/
 *.sqlite
 prisma/migrations/
 
+# Test-specific files
+test.db
+test.db-journal
+uploads/test/
+.env.local.backup
+logs/test/
+temp/test/
+
 # Logs
 logs/
 *.log

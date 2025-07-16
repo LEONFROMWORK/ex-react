@@ -1,13 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PaymentWidget } from "@/components/payment/PaymentWidget"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 const PLANS = {
@@ -56,15 +55,24 @@ const PLANS = {
 }
 
 export default function PricingPage() {
-  const { data: session } = useSession()
   const router = useRouter()
   const [billingPeriod, setBillingPeriod] = useState<"MONTHLY" | "YEARLY">("MONTHLY")
   const [selectedPlan, setSelectedPlan] = useState<"BASIC" | "PREMIUM" | "ENTERPRISE" | null>(null)
   const [showPayment, setShowPayment] = useState(false)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const testUser = localStorage.getItem('testUser')
+    if (!testUser) {
+      router.push("/auth/simple-login")
+      return
+    }
+    setUser(JSON.parse(testUser))
+  }, [router])
 
   const handleSelectPlan = (plan: "BASIC" | "PREMIUM" | "ENTERPRISE") => {
-    if (!session) {
-      router.push("/auth/signin")
+    if (!user) {
+      router.push("/auth/simple-login")
       return
     }
     setSelectedPlan(plan)

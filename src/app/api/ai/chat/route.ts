@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth-helper"
-import { SendChatMessageHandler, SendChatMessageValidator } from "@/Features/AIChat/SendChatMessage"
+import { container } from "@/Infrastructure/DependencyInjection/Container"
 import { createAIChatLimit } from "@/Features/UsageTracking/Middleware/UsageLimitMiddleware"
 
 const usageLimiter = createAIChatLimit()
@@ -24,27 +24,18 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    // Validate request
-    const validationResult = SendChatMessageValidator.validate({
+    // Handle chat message using new architecture
+    const handler = container.getSendMessageHandler()
+    const result = await handler.handle({
       ...body,
       userId: session.user.id,
+      tenantId: 'default' // Default tenant
     })
-
-    if (validationResult.isFailure) {
-      return NextResponse.json(
-        { success: false, message: validationResult.error.message },
-        { status: 400 }
-      )
-    }
-
-    // Handle chat message
-    const handler = new SendChatMessageHandler()
-    const result = await handler.handle(validationResult.value)
 
     if (result.isFailure) {
       return NextResponse.json(
-        { success: false, message: result.error.message },
-        { status: 500 }
+        { success: false, message: result.error!.message },
+        { status: 400 }
       )
     }
 

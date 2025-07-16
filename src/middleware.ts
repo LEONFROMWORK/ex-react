@@ -1,42 +1,30 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(req: NextRequest) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-    const isAuth = !!token
-    const isAuthPage = req.nextUrl.pathname.startsWith("/auth")
-    const isAdminPage = req.nextUrl.pathname.startsWith("/admin")
-
-    if (isAuthPage) {
-      if (isAuth) {
-        return NextResponse.redirect(new URL("/dashboard", req.url))
-      }
-      return NextResponse.next()
-    }
-
-    if (isAdminPage && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard", req.url))
-    }
-
-    if (!isAuth) {
-      let from = req.nextUrl.pathname
-      if (req.nextUrl.search) {
-        from += req.nextUrl.search
-      }
-
-      return NextResponse.redirect(
-        new URL(`/auth/login?from=${encodeURIComponent(from)}`, req.url)
-      )
-    }
-    
-    return NextResponse.next()
+export default function middleware(req: NextRequest) {
+  const response = NextResponse.next()
+  
+  // CSP 헤더 설정
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: wss: http: https:",
+    "frame-src 'self'"
+  ].join('; ')
+  
+  response.headers.set('Content-Security-Policy', csp)
+  
+  // 추가 보안 헤더
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  return response
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/auth/:path*",
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
 }

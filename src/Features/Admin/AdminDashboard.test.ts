@@ -37,7 +37,7 @@ describe('Admin Dashboard Tests', () => {
         json: async () => mockStats,
       })
 
-      render(<AdminDashboard />)
+      render(AdminDashboard())
 
       await waitFor(() => {
         expect(screen.getByText('150')).toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('Admin Dashboard Tests', () => {
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
         .mockResolvedValueOnce({ ok: true, json: async () => mockActivities })
 
-      render(<AdminDashboard />)
+      render(AdminDashboard())
 
       await waitFor(() => {
         expect(screen.getByText(/USER_CREATED/)).toBeInTheDocument()
@@ -90,7 +90,7 @@ describe('Admin Dashboard Tests', () => {
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
         .mockResolvedValueOnce({ ok: true, json: async () => mockHealth })
 
-      render(<AdminDashboard />)
+      render(AdminDashboard())
 
       await waitFor(() => {
         expect(screen.getByText(/시스템 상태/)).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('Admin Dashboard Tests', () => {
         json: async () => mockUsers,
       })
 
-      render(<AdminDashboard />)
+      render(AdminDashboard())
 
       await waitFor(() => {
         expect(screen.getByText('user1@example.com')).toBeInTheDocument()
@@ -136,7 +136,7 @@ describe('Admin Dashboard Tests', () => {
         json: async () => mockSession,
       })
 
-      render(<AdminDashboard />)
+      render(AdminDashboard())
 
       await waitFor(() => {
         expect(screen.getByText(/관리자 관리/)).toBeInTheDocument()

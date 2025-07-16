@@ -1,79 +1,55 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth-helper"
-import { GetTransactionsHandler, GetTransactionsRequestSchema } from "@/Features/Admin/Payments/GetTransactions"
-import { ValidateAdminAccessHandler, hasAdminPermission } from "@/Features/Admin/AdminAuth/ValidateAdminAccess"
+import { getServerSession } from '@/lib/auth/session'
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
     const session = await getServerSession()
     if (!session) {
-      return NextResponse.json(
-        { error: "인증이 필요합니다" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 })
     }
 
-    // Validate admin access
-    const accessValidator = new ValidateAdminAccessHandler()
-    const accessResult = await accessValidator.handle({
-      userId: session.user.id,
-      role: session.user.role,
-      requestPath: "/api/admin/payments",
-    })
-
-    if (!accessResult.isSuccess || !accessResult.value.isAllowed) {
-      return NextResponse.json(
-        { error: "권한이 없습니다" },
-        { status: 403 }
-      )
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 })
     }
 
-    // Check specific permission
-    if (!hasAdminPermission(accessResult.value.permissions, "payments", "read")) {
-      return NextResponse.json(
-        { error: "결제 조회 권한이 없습니다" },
-        { status: 403 }
-      )
-    }
-
-    // Get query parameters
     const searchParams = request.nextUrl.searchParams
-    const requestData = {
-      page: parseInt(searchParams.get("page") || "1"),
-      limit: parseInt(searchParams.get("limit") || "20"),
-      search: searchParams.get("search") || undefined,
-      status: searchParams.get("status") as any || undefined,
-      sortBy: searchParams.get("sortBy") as any || "createdAt",
-      sortOrder: searchParams.get("sortOrder") as any || "desc",
-    }
+    const statusParam = searchParams.get("status")
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "20")
 
-    // Validate request
-    const validationResult = GetTransactionsRequestSchema.safeParse(requestData)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "잘못된 요청입니다", details: validationResult.error },
-        { status: 400 }
-      )
-    }
+    const where = statusParam ? { status: statusParam as any } : {}
+    
+    const [payments, total] = await Promise.all([
+      prisma.paymentIntent.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.paymentIntent.count({ where })
+    ])
 
-    // Get transactions
-    const handler = new GetTransactionsHandler()
-    const result = await handler.handle(validationResult.data)
-
-    if (!result.isSuccess) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(result.value)
+    return NextResponse.json({
+      payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
-    console.error("Admin payments API error:", error)
-    return NextResponse.json(
-      { error: "서버 오류가 발생했습니다" },
-      { status: 500 }
-    )
+    console.error("Payments API error:", error)
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 })
   }
 }

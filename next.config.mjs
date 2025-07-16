@@ -7,7 +7,7 @@ const nextConfig = {
     },
   },
   images: {
-    domains: ['utfs.io'], // for uploadthing
+    domains: ['utfs.io'],
   },
 }
 

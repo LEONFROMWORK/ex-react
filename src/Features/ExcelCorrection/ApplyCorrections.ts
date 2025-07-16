@@ -163,7 +163,7 @@ export class ApplyCorrectionHandler {
           failedCorrections.push({
             sheet: correction.sheet,
             cell: correction.cell,
-            reason: result.error.message,
+            reason: result.error?.message || "Request failed",
           });
         }
       }

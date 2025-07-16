@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 패키지 파일 복사
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Socket 서버 파일 복사
+COPY socket-server.js ./
+
+# 포트 노출
+EXPOSE 3001
+
+# 서버 실행
+CMD ["node", "socket-server.js"]

@@ -2,6 +2,7 @@ import { z } from "zod"
 import { Result } from "@/Common/Result"
 import { OpenAI } from "openai"
 import { prisma } from "@/lib/prisma"
+import { FineTuningLogger } from "@/lib/fine-tuning/logger"
 
 // Request/Response types
 export class SendChatMessage {
@@ -92,6 +93,7 @@ export class ChatIntentClassifier {
 // Handler
 export class SendChatMessageHandler {
   private openai: OpenAI
+  private fineTuningLogger: FineTuningLogger
   private readonly TIER1_MODEL = "gpt-3.5-turbo"
   private readonly TIER2_MODEL = "gpt-4"
   private readonly TIER1_COST_PER_TOKEN = 0.0005
@@ -101,6 +103,7 @@ export class SendChatMessageHandler {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     })
+    this.fineTuningLogger = new FineTuningLogger()
   }
 
   async handle(request: SendChatMessageRequest): Promise<Result<SendChatMessageResponse>> {
@@ -141,6 +144,7 @@ export class SendChatMessageHandler {
     request: SendChatMessageRequest, 
     conversationId: string
   ): Promise<SendChatMessageResponse> {
+    const startTime = Date.now()
     const systemPrompt = this.buildTier1SystemPrompt()
     const userPrompt = await this.buildUserPrompt(request)
 
@@ -156,6 +160,21 @@ export class SendChatMessageHandler {
 
     const response = completion.choices[0].message.content || ""
     const tokensUsed = completion.usage?.total_tokens || 0
+    const responseTime = Date.now() - startTime
+
+    // Log for fine-tuning
+    await this.fineTuningLogger.logInteraction({
+      userId: request.userId,
+      sessionId: conversationId,
+      userQuery: request.message,
+      systemPrompt,
+      aiResponse: response,
+      responseTime,
+      tokenCount: tokensUsed,
+      modelUsed: this.TIER1_MODEL,
+      excelContext: request.context,
+      taskType: this.determineTaskType(request.message)
+    })
 
     // Check if escalation to Tier 2 is needed
     if (this.shouldEscalateToTier2(response)) {
@@ -177,6 +196,7 @@ export class SendChatMessageHandler {
     request: SendChatMessageRequest,
     conversationId: string
   ): Promise<SendChatMessageResponse> {
+    const startTime = Date.now()
     const systemPrompt = this.buildTier2SystemPrompt()
     const userPrompt = await this.buildUserPrompt(request)
 
@@ -192,6 +212,21 @@ export class SendChatMessageHandler {
 
     const response = completion.choices[0].message.content || ""
     const tokensUsed = completion.usage?.total_tokens || 0
+    const responseTime = Date.now() - startTime
+
+    // Log for fine-tuning
+    await this.fineTuningLogger.logInteraction({
+      userId: request.userId,
+      sessionId: conversationId,
+      userQuery: request.message,
+      systemPrompt,
+      aiResponse: response,
+      responseTime,
+      tokenCount: tokensUsed,
+      modelUsed: this.TIER2_MODEL,
+      excelContext: request.context,
+      taskType: this.determineTaskType(request.message)
+    })
 
     return {
       conversationId,
@@ -361,5 +396,23 @@ export class SendChatMessageHandler {
         },
       ],
     })
+  }
+
+  private determineTaskType(message: string): string {
+    const taskPatterns = [
+      { pattern: /생성|만들|create|make|새로/i, type: "CREATE" },
+      { pattern: /수정|고치|fix|correct|오류/i, type: "CORRECT" },
+      { pattern: /분석|analyze|검토|review/i, type: "ANALYZE" },
+      { pattern: /최적화|개선|optimize|improve/i, type: "OPTIMIZE" },
+      { pattern: /변환|convert|transform/i, type: "TRANSFORM" },
+    ]
+    
+    for (const { pattern, type } of taskPatterns) {
+      if (pattern.test(message)) {
+        return type
+      }
+    }
+    
+    return "GENERAL"
   }
 }

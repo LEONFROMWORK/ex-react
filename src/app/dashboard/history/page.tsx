@@ -1,7 +1,6 @@
-import { getServerSession } from "@/lib/auth-helper"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { redirect } from "next/navigation"
+'use client'
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,39 +18,110 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 
-export default async function HistoryPage() {
-  const session = await getServerSession()
-
-  if (!session) {
-    redirect("/auth/login")
-  }
-
-  // Get user's files with analyses
-  const files = await prisma.file.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      analyses: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
+// Mock data for demonstration
+const mockFiles = [
+  {
+    id: "1",
+    originalName: "월간_매출_보고서_2024.xlsx",
+    fileSize: 2048000,
+    status: "COMPLETED",
+    createdAt: new Date("2024-01-15T10:30:00"),
+    analyses: [{
+      id: "a1",
+      report: {
+        totalErrors: 15,
+        correctedErrors: 12,
       },
-    },
-  })
+      aiTier: "TIER1"
+    }]
+  },
+  {
+    id: "2",
+    originalName: "재고관리_데이터.xlsx",
+    fileSize: 5242880,
+    status: "COMPLETED",
+    createdAt: new Date("2024-01-14T14:20:00"),
+    analyses: [{
+      id: "a2",
+      report: {
+        totalErrors: 8,
+        correctedErrors: 8,
+      },
+      aiTier: "TIER2"
+    }]
+  },
+  {
+    id: "3",
+    originalName: "고객_데이터베이스.xlsx",
+    fileSize: 3145728,
+    status: "PROCESSING",
+    createdAt: new Date("2024-01-16T09:15:00"),
+    analyses: []
+  }
+]
 
-  // Get user's AI usage stats
-  const aiStats = await prisma.aIUsageStats.findUnique({
-    where: { userId: session.user.id },
-  })
+const mockAiStats = {
+  tier1Calls: 24,
+  tier1Tokens: 125000,
+  tier2Calls: 3,
+  tier2Tokens: 45000,
+  costSaved: 12.5,
+  tokensSaved: 80000
+}
 
+export default function HistoryPage() {
+  const [files, setFiles] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  
+  const handleDownload = (file: any) => {
+    // Mock 다운로드 시뮬레이션
+    const link = document.createElement("a")
+    link.href = "#"
+    link.download = `corrected_${file.originalName}`
+    link.click()
+    
+    // 실제로는 서버에서 파일을 다운로드하는 로직이 필요
+    alert(`다운로드 시작: corrected_${file.originalName}`)
+  }
+  
+  useEffect(() => {
+    // localStorage에서 파일 정보 가져오기
+    const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]')
+    
+    // 파일 정보를 history 페이지에 맞게 변환
+    const formattedFiles = uploadedFiles.map((file: any) => ({
+      id: file.id,
+      originalName: file.name,
+      fileSize: file.size,
+      status: file.status === 'completed' ? 'COMPLETED' : file.status === 'processing' ? 'PROCESSING' : 'PENDING',
+      createdAt: new Date(file.uploadedAt),
+      analyses: file.result ? [{
+        id: `analysis-${file.id}`,
+        report: {
+          totalErrors: file.result.totalErrors || 0,
+          correctedErrors: file.result.fixedErrors || 0,
+          confidence: file.result.confidence || 0
+        },
+        aiTier: "TIER1"
+      }] : []
+    }))
+    
+    // 최신 파일이 먼저 오도록 정렬
+    formattedFiles.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())
+    
+    setFiles(formattedFiles)
+  }, [])
+  
+  // Calculate statistics
   const totalFiles = files.length
   const completedFiles = files.filter(f => f.status === "COMPLETED").length
   const totalErrors = files.reduce((sum, file) => {
     const analysis = file.analyses[0]
-    return sum + ((analysis?.report as any)?.totalErrors || 0)
+    return sum + (analysis?.report?.totalErrors || 0)
   }, 0)
   const totalCorrected = files.reduce((sum, file) => {
     const analysis = file.analyses[0]
-    return sum + ((analysis?.report as any)?.correctedErrors || 0)
+    return sum + (analysis?.report?.correctedErrors || 0)
   }, 0)
 
   return (
@@ -108,7 +178,7 @@ export default async function HistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(aiStats?.tier1Tokens || 0) + (aiStats?.tier2Tokens || 0)}
+              {mockAiStats.tier1Tokens + mockAiStats.tier2Tokens}
             </div>
             <p className="text-xs text-muted-foreground">
               토큰 사용
@@ -138,7 +208,7 @@ export default async function HistoryPage() {
             <div className="space-y-4">
               {files.map((file) => {
                 const analysis = file.analyses[0]
-                const report = analysis?.report as any
+                const report = analysis?.report
 
                 return (
                   <div
@@ -187,7 +257,11 @@ export default async function HistoryPage() {
                               보기
                             </Button>
                           </Link>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDownload(file)}
+                          >
                             <Download className="h-4 w-4 mr-1" />
                             다운로드
                           </Button>
@@ -209,47 +283,45 @@ export default async function HistoryPage() {
       </Card>
 
       {/* AI Usage Summary */}
-      {aiStats && (aiStats.tier1Calls > 0 || aiStats.tier2Calls > 0) && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>AI 사용 통계</CardTitle>
-            <CardDescription>
-              비용 효율적인 AI 사용 현황
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold">기본 AI (Tier 1)</div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {aiStats.tier1Calls}회
-                </div>
-                <div className="text-sm text-gray-600">
-                  {aiStats.tier1Tokens.toLocaleString()} 토큰
-                </div>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>AI 사용 통계</CardTitle>
+          <CardDescription>
+            비용 효율적인 AI 사용 현황
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-lg font-semibold">기본 AI (Tier 1)</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {mockAiStats.tier1Calls}회
               </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold">고급 AI (Tier 2)</div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {aiStats.tier2Calls}회
-                </div>
-                <div className="text-sm text-gray-600">
-                  {aiStats.tier2Tokens.toLocaleString()} 토큰
-                </div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-lg font-semibold">절약 효과</div>
-                <div className="text-2xl font-bold text-green-600">
-                  ₩{Math.round(aiStats.costSaved * 1300).toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {aiStats.tokensSaved.toLocaleString()} 토큰 절약
-                </div>
+              <div className="text-sm text-gray-600">
+                {mockAiStats.tier1Tokens.toLocaleString()} 토큰
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-lg font-semibold">고급 AI (Tier 2)</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {mockAiStats.tier2Calls}회
+              </div>
+              <div className="text-sm text-gray-600">
+                {mockAiStats.tier2Tokens.toLocaleString()} 토큰
+              </div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-lg font-semibold">절약 효과</div>
+              <div className="text-2xl font-bold text-green-600">
+                ₩{Math.round(mockAiStats.costSaved * 1300).toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">
+                {mockAiStats.tokensSaved.toLocaleString()} 토큰 절약
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

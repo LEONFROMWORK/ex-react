@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
-import { Loader2 } from "lucide-react"
+import { Loader2, FileSpreadsheet } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -62,8 +63,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      {/* Header */}
+      <nav className="fixed top-0 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b dark:border-gray-800 z-50">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <FileSpreadsheet className="h-6 w-6 dark:text-white" />
+            <span className="text-xl font-bold dark:text-white">Exhell</span>
+          </Link>
+          <ThemeToggle />
+        </div>
+      </nav>
+      
+      {/* Content */}
+      <div className="flex flex-1 items-center justify-center px-4 pt-16">
+        <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">로그인</CardTitle>
           <CardDescription>
@@ -126,7 +140,25 @@ export default function LoginPage() {
             </p>
           </CardFooter>
         </form>
-      </Card>
+        </Card>
+      </div>
+      
+      {/* Footer */}
+      <footer className="bg-gray-900 dark:bg-black text-white py-8 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="text-gray-300">&copy; 2024 Exhell. All rights reserved.</p>
+            <div className="flex space-x-6">
+              <Link href="/privacy" className="text-gray-300 hover:text-white transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/cookies" className="text-gray-300 hover:text-white transition-colors">
+                Cookie Policy
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

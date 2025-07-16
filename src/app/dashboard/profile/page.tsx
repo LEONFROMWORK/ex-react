@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,10 +25,10 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>
 
 export default function ProfilePage() {
-  const { data: session } = useSession()
+  const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<any>(null)
   const [referralCode, setReferralCode] = useState("")
   const [tokens, setTokens] = useState(100)
 
@@ -42,30 +42,31 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    fetchProfile()
-  }, [])
-
-  const fetchProfile = async () => {
-    try {
-      const response = await axios.get("/api/user/profile")
-      setProfile(response.data.profile)
-      setReferralCode(response.data.referralCode)
-      setTokens(response.data.tokens)
-      reset({
-        name: response.data.name,
-        phone: response.data.profile?.phone || "",
-        company: response.data.profile?.company || "",
-        position: response.data.profile?.position || "",
-      })
-    } catch (error) {
-      console.error("Profile fetch error:", error)
+    const testUser = localStorage.getItem('testUser')
+    if (!testUser) {
+      router.push("/auth/simple-login")
+      return
     }
-  }
+    
+    const userData = JSON.parse(testUser)
+    setUser(userData)
+    setReferralCode(`REF${userData.id.toUpperCase().slice(0, 6)}`)
+    reset({
+      name: userData.name,
+      phone: "",
+      company: "",
+      position: "",
+    })
+  }, [router, reset])
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true)
     try {
-      await axios.put("/api/user/profile", data)
+      // 로컬 스토리지 업데이트 (테스트용)
+      const updatedUser = { ...user, name: data.name }
+      localStorage.setItem('testUser', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+      
       toast({
         title: "프로필 업데이트",
         description: "프로필이 성공적으로 업데이트되었습니다.",
@@ -89,15 +90,15 @@ export default function ProfilePage() {
     })
   }
 
-  if (!session) {
-    return null
+  if (!user) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">프로필</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold dark:text-white">프로필</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
           계정 정보를 관리하고 설정을 변경하세요
         </p>
       </div>
@@ -133,7 +134,7 @@ export default function ProfilePage() {
                   <Input
                     id="email"
                     type="email"
-                    value={session.user.email || ""}
+                    value={user.email || ""}
                     disabled
                   />
                 </div>

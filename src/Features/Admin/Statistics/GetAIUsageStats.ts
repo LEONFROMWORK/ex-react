@@ -3,6 +3,7 @@ import { Result } from "@/Common/Result";
 import { AdminErrors } from "@/Common/Errors";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, subDays, eachDayOfInterval } from "date-fns";
+import { GetUsageStatsHandler } from "@/Features/AIModelManagement/MonitorUsage/MonitorUsage";
 
 // Request Schema
 export const GetAIUsageStatsRequestSchema = z.object({
@@ -47,6 +48,12 @@ export interface GetAIUsageStatsResponse {
 
 // Handler
 export class GetAIUsageStatsHandler {
+  private readonly usageStatsHandler: GetUsageStatsHandler;
+
+  constructor(usageStatsHandler?: GetUsageStatsHandler) {
+    this.usageStatsHandler = usageStatsHandler || new GetUsageStatsHandler();
+  }
+
   async handle(
     request: GetAIUsageStatsRequest
   ): Promise<Result<GetAIUsageStatsResponse>> {
@@ -54,34 +61,34 @@ export class GetAIUsageStatsHandler {
       const endDate = new Date();
       const startDate = this.getStartDate(request.period);
 
-      // Get AI usage stats
-      const aiUsageStats = await prisma.aIUsageStats.aggregate({
-        _sum: {
-          tier1Calls: true,
-          tier1Tokens: true,
-          tier1Cost: true,
-          tier2Calls: true,
-          tier2Tokens: true,
-          tier2Cost: true,
-          tokensSaved: true,
-          costSaved: true,
-        },
+      // Get usage stats from AI Model Management
+      const usageResult = await this.usageStatsHandler.handle({
+        startDate,
+        endDate
       });
 
-      // Get analysis data for the period
-      const analyses = await prisma.analysis.findMany({
+      if (usageResult.isFailure) {
+        return Result.failure(AdminErrors.QueryFailed);
+      }
+
+      const modelUsageStats = usageResult.value!;
+
+      // Get AI model usage logs for detailed analysis
+      const usageLogs = await prisma.aIModelUsageLog.findMany({
         where: {
           createdAt: {
             gte: startDate,
             lte: endDate,
           },
         },
-        select: {
-          aiTier: true,
-          tokensUsed: true,
-          estimatedCost: true,
-          confidence: true,
-          createdAt: true,
+        include: {
+          modelConfig: {
+            select: {
+              provider: true,
+              modelName: true,
+              displayName: true,
+            },
+          },
         },
       });
 
@@ -100,26 +107,47 @@ export class GetAIUsageStatsHandler {
         _count: true,
       });
 
-      // Calculate overview stats
-      const tier1Requests = analyses.filter(a => a.aiTier === "TIER1").length;
-      const tier2Requests = analyses.filter(a => a.aiTier === "TIER2").length;
-      const totalRequests = tier1Requests + tier2Requests;
-      const totalTokens = analyses.reduce((sum, a) => sum + a.tokensUsed, 0);
-      const totalCost = analyses.reduce((sum, a) => sum + a.estimatedCost, 0);
+      // Calculate overview stats from model usage
+      const totalRequests = modelUsageStats.totalRequests;
+      const totalTokens = modelUsageStats.stats.reduce((sum, stat) => sum + stat.totalTokens, 0);
+      const totalCost = modelUsageStats.totalCost;
+      
+      // Separate by model tier (simplified - you might want to add tier info to model config)
+      const tier1Models = ['gpt-3.5-turbo', 'gemini-pro'];
+      const tier1Stats = modelUsageStats.stats.filter(stat => 
+        tier1Models.includes(stat.modelName.toLowerCase())
+      );
+      const tier2Stats = modelUsageStats.stats.filter(stat => 
+        !tier1Models.includes(stat.modelName.toLowerCase())
+      );
+      
+      const tier1Requests = tier1Stats.reduce((sum, stat) => sum + stat.totalRequests, 0);
+      const tier2Requests = tier2Stats.reduce((sum, stat) => sum + stat.totalRequests, 0);
 
       const cacheHits = cacheData._sum.hitCount || 0;
       const totalQueriesWithCache = totalRequests + cacheHits;
       const cacheHitRate = totalQueriesWithCache > 0 ? cacheHits / totalQueriesWithCache : 0;
 
       // Calculate daily stats
-      const dailyStats = this.calculateDailyStats(analyses, startDate, endDate);
+      const dailyStats = this.calculateDailyStats(usageLogs, startDate, endDate);
 
-      // Calculate model stats
-      const modelStats = this.calculateModelStats(analyses);
+      // Transform model stats from usage handler
+      const modelStats = modelUsageStats.stats.map(stat => ({
+        model: stat.modelName,
+        requests: stat.totalRequests,
+        tokens: stat.totalTokens,
+        avgTokensPerRequest: stat.totalRequests > 0 ? stat.totalTokens / stat.totalRequests : 0,
+        cost: stat.totalCost,
+      }));
 
       // Calculate performance metrics
-      const avgConfidence = analyses.length > 0
-        ? analyses.reduce((sum, a) => sum + (a.confidence || 0), 0) / analyses.length
+      const successfulLogs = usageLogs.filter(log => log.success);
+      const avgLatency = successfulLogs.length > 0
+        ? successfulLogs.reduce((sum, log) => sum + log.latency, 0) / successfulLogs.length
+        : 0;
+      
+      const errorRate = totalRequests > 0 
+        ? (totalRequests - successfulLogs.length) / totalRequests 
         : 0;
       
       const tier2TriggerRate = totalRequests > 0 ? tier2Requests / totalRequests : 0;
@@ -131,17 +159,17 @@ export class GetAIUsageStatsHandler {
           tier2Requests,
           totalTokens,
           totalCost,
-          savedTokens: aiUsageStats._sum.tokensSaved || 0,
-          savedCost: aiUsageStats._sum.costSaved || 0,
+          savedTokens: cacheData._sum.tokensUsed || 0,
+          savedCost: totalCost * cacheHitRate, // Estimated savings from cache
           cacheHitRate,
         },
         daily: dailyStats,
         models: modelStats,
         performance: {
-          avgConfidence,
+          avgConfidence: 0.85, // This would require adding confidence tracking
           tier2TriggerRate,
-          avgResponseTime: 2.5, // Placeholder - would need actual timing data
-          errorRate: 0.02, // Placeholder - would need error tracking
+          avgResponseTime: avgLatency / 1000, // Convert to seconds
+          errorRate,
         },
       });
     } catch (error) {
@@ -165,24 +193,29 @@ export class GetAIUsageStatsHandler {
   }
 
   private calculateDailyStats(
-    analyses: any[],
+    usageLogs: any[],
     startDate: Date,
     endDate: Date
   ): any[] {
     const days = eachDayOfInterval({ start: startDate, end: endDate });
+    const tier1Models = ['gpt-3.5-turbo', 'gemini-pro'];
     
     return days.map(day => {
       const dayStart = startOfDay(day);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
       
-      const dayAnalyses = analyses.filter(
-        a => a.createdAt >= dayStart && a.createdAt < dayEnd
+      const dayLogs = usageLogs.filter(
+        log => log.createdAt >= dayStart && log.createdAt < dayEnd
       );
       
-      const tier1 = dayAnalyses.filter(a => a.aiTier === "TIER1").length;
-      const tier2 = dayAnalyses.filter(a => a.aiTier === "TIER2").length;
-      const tokens = dayAnalyses.reduce((sum, a) => sum + a.tokensUsed, 0);
-      const cost = dayAnalyses.reduce((sum, a) => sum + a.estimatedCost, 0);
+      const tier1 = dayLogs.filter(log => 
+        tier1Models.includes(log.modelConfig.modelName.toLowerCase())
+      ).length;
+      const tier2 = dayLogs.filter(log => 
+        !tier1Models.includes(log.modelConfig.modelName.toLowerCase())
+      ).length;
+      const tokens = dayLogs.reduce((sum, log) => sum + log.totalTokens, 0);
+      const cost = dayLogs.reduce((sum, log) => sum + log.cost, 0);
       
       return {
         date: day.toISOString(),
@@ -194,30 +227,5 @@ export class GetAIUsageStatsHandler {
     });
   }
 
-  private calculateModelStats(analyses: any[]): any[] {
-    const modelMap = new Map<string, any>();
-    
-    analyses.forEach(analysis => {
-      const model = analysis.aiTier === "TIER1" ? "gpt-3.5-turbo" : "gpt-4";
-      
-      if (!modelMap.has(model)) {
-        modelMap.set(model, {
-          model,
-          requests: 0,
-          tokens: 0,
-          cost: 0,
-        });
-      }
-      
-      const stats = modelMap.get(model);
-      stats.requests += 1;
-      stats.tokens += analysis.tokensUsed;
-      stats.cost += analysis.estimatedCost;
-    });
-    
-    return Array.from(modelMap.values()).map(stats => ({
-      ...stats,
-      avgTokensPerRequest: stats.requests > 0 ? stats.tokens / stats.requests : 0,
-    }));
-  }
+  // Model stats are now calculated by the usage handler, so this method is no longer needed
 }

@@ -3,45 +3,122 @@ node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
 # Next.js
 .next
 out
-
-# Production
 build
 dist
-
-# Misc
-.DS_Store
-*.pem
-.env*.local
-.env
-
-# Debug
-npm-debug.log*
-
-# IDE
-.vscode
-.idea
 
 # Testing
 coverage
 .nyc_output
+jest.config.js
+jest.setup.js
+__tests__
+__mocks__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+e2e
 
-# Git
-.git
-.gitignore
+# Development
+.env*.local
+.env.development
+.env.test
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+*.pem
 
 # Documentation
 README.md
 docs
+*.md
+LICENSE
+CONTRIBUTING.md
+CHANGELOG.md
 
 # CI/CD
 .github
 .gitlab-ci.yml
 .travis.yml
+Jenkinsfile
 
 # Docker
-Dockerfile
+Dockerfile*
 docker-compose*.yml
+.dockerignore
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Linting/Formatting
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Scripts (개발용)
+scripts/test-*
+scripts/dev-*
+scripts/analyze-*
+
+# Backups
+*.backup
+*.bak
+*~
+package-lock.json.backup
+
+# Build artifacts
+.turbo
+
+# 최적화: 큰 파일들
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 분석 결과
+heavy-packages.log
+unused-packages.log
+bundle-analysis.html
+REFACTORING_GUIDE.md
+OPTIMIZATION_REPORT.md
+NODE_MODULES_OPTIMIZATION_GUIDE.md
+SYSTEM_CAPABILITY_ANALYSIS.md
+INTEGRATION2_IMPLEMENTATION_SUMMARY.md
+COLLECTED_DATA_ANALYSIS.md
+
+# 테스트 데이터
+test-data/
+mock-data/
+fixtures/
+
+# 캐시
+.cache/
+.parcel-cache/
+.next/cache/

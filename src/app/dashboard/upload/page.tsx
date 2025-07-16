@@ -1,20 +1,42 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useDropzone } from "react-dropzone"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { Upload, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react"
+import { Upload, FileSpreadsheet, AlertCircle, Loader2, Coins } from "lucide-react"
 import { cn } from "@/lib/utils"
-import axios from "axios"
+import apiClient from "@/lib/api-client"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 export default function UploadPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [userTokens, setUserTokens] = useState(0)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  
+  useEffect(() => {
+    // 로그인 확인
+    const testUser = localStorage.getItem('testUser')
+    if (!testUser) {
+      router.push('/auth/simple-login')
+    } else {
+      const userData = JSON.parse(testUser)
+      setUserTokens(userData.tokens || 0)
+    }
+  }, [router])
+
+  // 파일 크기에 따른 예상 토큰 계산
+  const calculateEstimatedTokens = (fileSize: number) => {
+    const sizeInMB = fileSize / (1024 * 1024)
+    // 1MB당 약 10토큰 소비 (예시)
+    return Math.max(10, Math.ceil(sizeInMB * 10))
+  }
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -41,19 +63,76 @@ export default function UploadPage() {
     formData.append("file", uploadedFile)
 
     try {
-      const response = await axios.post("/api/files/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      // 토큰 차감
+      const userData = JSON.parse(localStorage.getItem('testUser') || '{}')
+      const tokenCost = calculateEstimatedTokens(uploadedFile.size)
+      
+      if (userData.tokens < tokenCost) {
+        toast({
+          title: "토큰 부족",
+          description: "토큰이 부족합니다. 충전 후 이용해주세요.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Mock 파일 ID 생성
+      const fileId = `file-${Date.now()}`
+      
+      // 파일 업로드 시뮬레이션 (실제로는 서버로 전송)
+      toast({
+        title: "업로드 시작",
+        description: "파일을 업로드하고 있습니다...",
       })
 
-      if (response.data.success) {
-        toast({
-          title: "업로드 성공",
-          description: "파일 분석을 시작합니다.",
+      // 진행률 시뮬레이션
+      setUploadProgress(0)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval)
+            return 100
+          }
+          return prev + 10
         })
-        router.push(`/dashboard/analysis/${response.data.fileId}`)
-      }
+      }, 200)
+
+      // 업로드 시뮬레이션 대기
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // 업로드 완료 후 토큰 차감
+      userData.tokens -= tokenCost
+      localStorage.setItem('testUser', JSON.stringify(userData))
+      
+      // 토큰 사용 내역 추가
+      const tokenHistory = JSON.parse(localStorage.getItem('tokenHistory') || '[]')
+      tokenHistory.push({
+        id: tokenHistory.length + 1,
+        type: 'usage',
+        amount: -tokenCost,
+        description: `파일 분석: ${uploadedFile.name}`,
+        date: new Date().toISOString()
+      })
+      localStorage.setItem('tokenHistory', JSON.stringify(tokenHistory))
+
+      // 파일 정보 저장
+      const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]')
+      uploadedFiles.push({
+        id: fileId,
+        name: uploadedFile.name,
+        size: uploadedFile.size,
+        uploadedAt: new Date().toISOString(),
+        status: 'processing',
+        tokenCost
+      })
+      localStorage.setItem('uploadedFiles', JSON.stringify(uploadedFiles))
+
+      toast({
+        title: "업로드 완료",
+        description: `파일 분석을 시작합니다. (${tokenCost} 토큰 사용)`,
+      })
+      
+      router.push(`/dashboard/analysis/${fileId}`)
     } catch (error: any) {
       toast({
         title: "업로드 실패",
@@ -62,6 +141,7 @@ export default function UploadPage() {
       })
     } finally {
       setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -72,8 +152,8 @@ export default function UploadPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">파일 업로드</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold dark:text-white">파일 업로드</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
           Excel 파일을 업로드하여 오류를 자동으로 검사하고 수정하세요
         </p>
       </div>
@@ -92,18 +172,18 @@ export default function UploadPage() {
               className={cn(
                 "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
                 isDragActive
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-300 hover:border-primary"
+                  ? "border-primary bg-primary/5 dark:bg-primary/10"
+                  : "border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary"
               )}
             >
               <input {...getInputProps()} />
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium mb-2">
+              <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+              <p className="text-lg font-medium mb-2 dark:text-white">
                 {isDragActive
                   ? "파일을 여기에 놓으세요"
                   : "파일을 드래그하거나 클릭하여 선택하세요"}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 XLSX, XLS, CSV 파일 지원 (최대 50MB)
               </p>
             </div>
@@ -132,16 +212,25 @@ export default function UploadPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">
+                  <div className="text-sm text-blue-800 flex-1">
                     <p className="font-medium mb-1">파일이 준비되었습니다</p>
                     <p>업로드 버튼을 클릭하면 파일 분석이 시작됩니다.</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Coins className="h-4 w-4" />
+                        <span>예상 토큰 사용량: {calculateEstimatedTokens(uploadedFile.size)}개</span>
+                      </div>
+                      <Badge variant={userTokens >= calculateEstimatedTokens(uploadedFile.size) ? "default" : "destructive"}>
+                        잔액: {userTokens} 토큰
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <Button
                 onClick={handleUpload}
-                disabled={isUploading}
+                disabled={isUploading || userTokens < calculateEstimatedTokens(uploadedFile.size)}
                 className="w-full"
                 size="lg"
               >
@@ -150,6 +239,11 @@ export default function UploadPage() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     업로드 중...
                   </>
+                ) : userTokens < calculateEstimatedTokens(uploadedFile.size) ? (
+                  <>
+                    <Coins className="mr-2 h-4 w-4" />
+                    토큰이 부족합니다
+                  </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
@@ -157,6 +251,15 @@ export default function UploadPage() {
                   </>
                 )}
               </Button>
+
+              {isUploading && (
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-sm text-center text-gray-600">
+                    업로드 중... {uploadProgress}%
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

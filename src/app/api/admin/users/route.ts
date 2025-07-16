@@ -1,80 +1,101 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth-helper"
-import { GetUsersHandler, GetUsersRequestSchema } from "@/Features/Admin/UserManagement/GetUsers"
-import { ValidateAdminAccessHandler, hasAdminPermission } from "@/Features/Admin/AdminAuth/ValidateAdminAccess"
+import { auth } from '@/lib/auth/auth'
+import { AuthPermissionService } from '@/lib/services/auth-permission.service'
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession()
+    const session = await auth()
     if (!session) {
-      return NextResponse.json(
-        { error: "인증이 필요합니다" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 })
     }
 
-    // Validate admin access
-    const accessValidator = new ValidateAdminAccessHandler()
-    const accessResult = await accessValidator.handle({
-      userId: session.user.id,
-      role: session.user.role,
-      requestPath: "/api/admin/users",
-    })
-
-    if (!accessResult.isSuccess || !accessResult.value.isAllowed) {
-      return NextResponse.json(
-        { error: "권한이 없습니다" },
-        { status: 403 }
-      )
+    const permissionService = AuthPermissionService.getInstance()
+    const userRole = await permissionService.getUserRole(session.user.id)
+    
+    if (!permissionService.hasPermission(userRole, 'canAccessAdmin')) {
+      return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 })
     }
 
-    // Check specific permission
-    if (!hasAdminPermission(accessResult.value.permissions, "users", "read")) {
-      return NextResponse.json(
-        { error: "사용자 조회 권한이 없습니다" },
-        { status: 403 }
-      )
-    }
-
-    // Get query parameters
     const searchParams = request.nextUrl.searchParams
-    const requestData = {
-      page: parseInt(searchParams.get("page") || "1"),
-      limit: parseInt(searchParams.get("limit") || "20"),
-      search: searchParams.get("search") || undefined,
-      role: searchParams.get("role") as any || undefined,
-      status: searchParams.get("status") as any || undefined,
-      sortBy: searchParams.get("sortBy") as any || "createdAt",
-      sortOrder: searchParams.get("sortOrder") as any || "desc",
+    const search = searchParams.get("search") || undefined
+    const role = searchParams.get("role") || undefined
+    const tier = searchParams.get("tier") || undefined
+    const status = searchParams.get("status") || undefined
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "20")
+
+    const where: any = {}
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } }
+      ]
     }
-
-    // Validate request
-    const validationResult = GetUsersRequestSchema.safeParse(requestData)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "잘못된 요청입니다", details: validationResult.error },
-        { status: 400 }
-      )
+    if (role && role !== "all") {
+      where.role = role
     }
-
-    // Get users
-    const handler = new GetUsersHandler()
-    const result = await handler.handle(validationResult.data)
-
-    if (!result.isSuccess) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      )
+    if (tier && tier !== "all") {
+      where.tier = tier
     }
+    if (status && status !== "all") {
+      switch (status) {
+        case "active":
+          where.emailVerified = { not: null }
+          break
+        case "inactive":
+          where.emailVerified = null
+          break
+      }
+    }
+    
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          tier: true,
+          tokens: true,
+          emailVerified: true,
+          createdAt: true,
+          lastActiveAt: true,
+          subscription: {
+            select: {
+              plan: true,
+              status: true,
+              tokensRemaining: true
+            }
+          },
+          _count: {
+            select: {
+              files: true,
+              analyses: true,
+              reviews: true,
+              tokenTransactions: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.user.count({ where })
+    ])
 
-    return NextResponse.json(result.value)
+    return NextResponse.json({
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error("Admin users API error:", error)
-    return NextResponse.json(
-      { error: "서버 오류가 발생했습니다" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 })
   }
 }

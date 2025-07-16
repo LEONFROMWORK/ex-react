@@ -1,13 +1,46 @@
-import { IFileStorage } from "@/Features/ExcelUpload/UploadExcel";
+import { IFileStorage as IFileStorageFromUpload } from "@/Features/ExcelUpload/UploadExcel";
+import { IFileStorage } from "@/Infrastructure/DependencyInjection/Container";
 import { Result } from "@/Common/Result";
 import { ExcelErrors } from "@/Common/Errors";
 import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
-export class LocalFileStorage implements IFileStorage {
+export class LocalFileStorage implements IFileStorage, IFileStorageFromUpload {
   private uploadDir = join(process.cwd(), "uploads");
 
+  // IFileStorage implementation (from Container)
+  async save(file: Buffer, key: string): Promise<string> {
+    await this.ensureDirectoryExists();
+    
+    // Create subdirectories if key contains path separators
+    const keyParts = key.split('/');
+    if (keyParts.length > 1) {
+      const subDir = join(this.uploadDir, ...keyParts.slice(0, -1));
+      await mkdir(subDir, { recursive: true });
+    }
+    
+    const filePath = join(this.uploadDir, key);
+    await writeFile(filePath, file);
+    return `/api/uploads/${key}`;
+  }
+
+  async get(key: string): Promise<Buffer> {
+    const filePath = join(this.uploadDir, key);
+    if (!existsSync(filePath)) {
+      throw new Error(`File not found: ${key}`);
+    }
+    return await readFile(filePath);
+  }
+
+  async delete(key: string): Promise<void> {
+    const filePath = join(this.uploadDir, key);
+    if (existsSync(filePath)) {
+      await unlink(filePath);
+    }
+  }
+
+  // IFileStorageFromUpload implementation
   async uploadAsync(
     file: File,
     fileName: string

@@ -9,7 +9,8 @@ export const GetUsersRequestSchema = z.object({
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
   search: z.string().optional(),
-  role: z.enum(["USER", "ADMIN", "SUPER_ADMIN"]).optional(),
+  role: z.enum(["USER", "SUPPORT", "ADMIN", "SUPER_ADMIN"]).optional(),
+  tier: z.enum(["FREE", "BASIC", "PRO", "ENTERPRISE"]).optional(),
   status: z.enum(["active", "inactive", "suspended"]).optional(),
   sortBy: z.enum(["createdAt", "email", "name", "tokens"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
@@ -33,6 +34,7 @@ export interface UserListItem {
   email: string;
   name: string;
   role: string;
+  tier?: string;
   emailVerified: Date | null;
   tokens: number;
   aiPreference: string;
@@ -67,6 +69,10 @@ export class GetUsersHandler {
         where.role = request.role;
       }
       
+      if (request.tier) {
+        where.tier = request.tier;
+      }
+      
       if (request.status) {
         switch (request.status) {
           case "active":
@@ -99,6 +105,7 @@ export class GetUsersHandler {
           email: true,
           name: true,
           role: true,
+          tier: true,
           emailVerified: true,
           tokens: true,
           aiPreference: true,

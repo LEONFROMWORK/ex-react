@@ -1,7 +1,24 @@
 import { EnhancedExcelAnalyzer } from "@/lib/excel/analyzer-enhanced"
 import { OpenAI } from "openai"
-import { Redis } from "ioredis"
 import { prisma } from "@/lib/prisma"
+import { config } from "@/config"
+
+// Service imports - conditionally loaded based on environment
+import { LocalFileStorage } from "@/Infrastructure/ExternalServices/LocalFileStorage"
+
+// AI Model Management handlers
+import { ConfigureModelHandler } from "@/Features/AIModelManagement/ConfigureModel/ConfigureModel"
+import { SelectModelHandler } from "@/Features/AIModelManagement/SelectModel/SelectModel"
+import { ValidateModelHandler } from "@/Features/AIModelManagement/ValidateModel/ValidateModel"
+import { GetActiveModelsHandler } from "@/Features/AIModelManagement/GetActiveModels/GetActiveModels"
+import { LogUsageHandler, GetUsageStatsHandler } from "@/Features/AIModelManagement/MonitorUsage/MonitorUsage"
+
+// AI Chat handlers
+import { SendMessageHandler } from "@/Features/AIChat/SendMessage/SendMessage"
+import { SendChatMessageHandler } from "@/Features/AIChat/SendChatMessage"
+import { ClassifyIntentHandler } from "@/Features/AIChat/ClassifyIntent/ClassifyIntent"
+import { GenerateResponseHandler } from "@/Features/AIChat/GenerateResponse/GenerateResponse"
+import { ManageConversationHandler } from "@/Features/AIChat/ManageConversation/ManageConversation"
 
 // Service interfaces
 export interface IFileStorage {
@@ -27,45 +44,95 @@ export class Container {
   private services: Map<string, any> = new Map()
 
   private constructor() {
-    this.registerServices()
+    // Services will be registered on first use
   }
 
   static getInstance(): Container {
     if (!Container.instance) {
       Container.instance = new Container()
+      // Register services synchronously for now
+      Container.instance.registerServicesSync()
     }
     return Container.instance
   }
-
-  private registerServices() {
+  
+  private registerServicesSync() {
     // Core services
     this.register("prisma", prisma)
     this.register("excelAnalyzer", () => new EnhancedExcelAnalyzer())
     
-    // External services
-    this.register("openai", () => new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    }))
-    
-    // Cache service
-    if (process.env.REDIS_URL) {
-      this.register("redis", () => new Redis(process.env.REDIS_URL!))
-      this.register("cache", () => new RedisCacheService(this.get("redis")))
+    // AI services - environment aware
+    if (config.ai.useMock) {
+      this.register("openai", () => {
+        // Lazy load mock service
+        const MockAIService = require("@/Services/AI/MockAIService").MockAIService
+        return new MockAIService()
+      })
     } else {
-      this.register("cache", () => new InMemoryCacheService())
+      this.register("openai", () => new OpenAI({
+        apiKey: config.ai.providers.openai,
+      }))
     }
     
-    // File storage
-    if (process.env.AWS_S3_BUCKET) {
-      this.register("fileStorage", () => new S3FileStorage())
-    } else if (process.env.AZURE_STORAGE_CONNECTION) {
-      this.register("fileStorage", () => new AzureBlobStorage())
+    // Cache service - environment aware
+    if (config.cache.provider === 'redis' && config.cache.redis.enabled) {
+      this.register("cache", () => {
+        const RedisCacheService = require("@/Services/Cache/RedisCacheService").RedisCacheService
+        return new RedisCacheService()
+      })
+    } else {
+      this.register("cache", () => {
+        const InMemoryCacheService = require("@/Services/Cache/InMemoryCacheService").InMemoryCacheService
+        return new InMemoryCacheService()
+      })
+    }
+    
+    // File storage - environment aware
+    if (config.storage.provider === 's3') {
+      this.register("fileStorage", () => {
+        const S3FileStorage = require("@/Infrastructure/ExternalServices/S3FileStorage").S3FileStorage
+        return new S3FileStorage()
+      })
     } else {
       this.register("fileStorage", () => new LocalFileStorage())
     }
     
-    // Notification service
-    this.register("notification", () => new EmailNotificationService())
+    // Notification service - environment aware
+    if (config.email.provider === 'mock') {
+      this.register("notification", () => new MockEmailService())
+    } else {
+      this.register("notification", () => new EmailNotificationService())
+    }
+    
+    // Rest of services...
+    this.registerHandlers()
+  }
+
+  private registerHandlers() {
+    // Prompt cache service (Excel generation)
+    this.register("promptCacheService", () => this.get("cache"))
+    
+    // AI Model Management handlers
+    this.register("configureModelHandler", () => new ConfigureModelHandler())
+    this.register("selectModelHandler", () => new SelectModelHandler())
+    this.register("validateModelHandler", () => new ValidateModelHandler())
+    this.register("getActiveModelsHandler", () => new GetActiveModelsHandler())
+    this.register("logUsageHandler", () => new LogUsageHandler())
+    this.register("getUsageStatsHandler", () => new GetUsageStatsHandler())
+    
+    // AI Chat handlers
+    this.register("sendMessageHandler", () => new SendMessageHandler(
+      undefined,
+      this.get("classifyIntentHandler"),
+      this.get("selectModelHandler"),
+      this.get("generateResponseHandler"),
+      this.get("manageConversationHandler"),
+      this.get("logUsageHandler")
+    ))
+    this.register("sendChatMessageHandler", () => new SendChatMessageHandler())
+    this.register("classifyIntentHandler", () => new ClassifyIntentHandler())
+    this.register("generateResponseHandler", () => new GenerateResponseHandler())
+    this.register("manageConversationHandler", () => new ManageConversationHandler())
   }
 
   register<T>(key: string, factory: () => T): void {
@@ -104,64 +171,53 @@ export class Container {
   getNotificationService() {
     return this.get<INotificationService>("notification")
   }
-}
-
-// Cache implementations
-class InMemoryCacheService implements ICacheService {
-  private cache = new Map<string, { value: any; expires: number }>()
-
-  async get<T>(key: string): Promise<T | null> {
-    const item = this.cache.get(key)
-    if (!item) return null
-    
-    if (Date.now() > item.expires) {
-      this.cache.delete(key)
-      return null
-    }
-    
-    return item.value as T
+  
+  // AI Model Management handlers
+  getConfigureModelHandler() {
+    return this.get<ConfigureModelHandler>("configureModelHandler")
   }
-
-  async set<T>(key: string, value: T, ttl: number = 3600): Promise<void> {
-    this.cache.set(key, {
-      value,
-      expires: Date.now() + ttl * 1000,
-    })
+  
+  getSelectModelHandler() {
+    return this.get<SelectModelHandler>("selectModelHandler")
   }
-
-  async delete(key: string): Promise<void> {
-    this.cache.delete(key)
+  
+  getValidateModelHandler() {
+    return this.get<ValidateModelHandler>("validateModelHandler")
   }
-}
-
-class RedisCacheService implements ICacheService {
-  constructor(private redis: Redis) {}
-
-  async get<T>(key: string): Promise<T | null> {
-    const value = await this.redis.get(key)
-    if (!value) return null
-    
-    try {
-      return JSON.parse(value) as T
-    } catch {
-      return value as T
-    }
+  
+  getGetActiveModelsHandler() {
+    return this.get<GetActiveModelsHandler>("getActiveModelsHandler")
   }
-
-  async set<T>(key: string, value: T, ttl: number = 3600): Promise<void> {
-    const serialized = typeof value === "string" ? value : JSON.stringify(value)
-    await this.redis.set(key, serialized, "EX", ttl)
+  
+  getLogUsageHandler() {
+    return this.get<LogUsageHandler>("logUsageHandler")
   }
-
-  async delete(key: string): Promise<void> {
-    await this.redis.del(key)
+  
+  getGetUsageStatsHandler() {
+    return this.get<GetUsageStatsHandler>("getUsageStatsHandler")
+  }
+  
+  // AI Chat handlers
+  getSendMessageHandler() {
+    return this.get<SendMessageHandler>("sendMessageHandler")
+  }
+  
+  getSendChatMessageHandler() {
+    return this.get<SendChatMessageHandler>("sendChatMessageHandler")
+  }
+  
+  getClassifyIntentHandler() {
+    return this.get<ClassifyIntentHandler>("classifyIntentHandler")
+  }
+  
+  getGenerateResponseHandler() {
+    return this.get<GenerateResponseHandler>("generateResponseHandler")
+  }
+  
+  getManageConversationHandler() {
+    return this.get<ManageConversationHandler>("manageConversationHandler")
   }
 }
-
-// File storage implementations
-import { LocalFileStorage } from "@/Infrastructure/ExternalServices/LocalFileStorage"
-import { S3FileStorage } from "@/Infrastructure/ExternalServices/S3FileStorage"
-import { AzureBlobStorage } from "@/Infrastructure/ExternalServices/AzureBlobStorage"
 
 // Notification implementations
 class EmailNotificationService implements INotificationService {
@@ -173,6 +229,17 @@ class EmailNotificationService implements INotificationService {
   async sendSMS(to: string, message: string): Promise<void> {
     // Implementation would use Twilio, AWS SNS, etc.
     console.log(`SMS to ${to}: ${message}`)
+  }
+}
+
+class MockEmailService implements INotificationService {
+  async sendEmail(to: string, subject: string, body: string): Promise<void> {
+    console.log(`[MOCK] Email to ${to}: ${subject}`)
+    console.log(`[MOCK] Body: ${body}`)
+  }
+
+  async sendSMS(to: string, message: string): Promise<void> {
+    console.log(`[MOCK] SMS to ${to}: ${message}`)
   }
 }
 

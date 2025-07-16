@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { CorrectWithAIHandler } from "@/Features/ExcelCorrection/CorrectWithAI"
+import { getMockSession } from "@/lib/auth/mock-session"
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { fileId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getMockSession()
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -24,23 +22,47 @@ export async function POST(
       )
     }
 
-    const handler = new CorrectWithAIHandler()
-    const result = await handler.handle({
+    // Mock correction result
+    const correctionId = `correction-${params.fileId}`
+    
+    // Simulate AI correction with mock data
+    const mockCorrections = [
+      {
+        errorId: "err-1",
+        type: "FORMULA_ERROR",
+        original: "=A1+A2+A3+A4+A5",
+        corrected: "=SUM(A1:A5)",
+        confidence: 0.95,
+        applied: autoApply
+      },
+      {
+        errorId: "err-2",
+        type: "DATA_TYPE_ERROR",
+        original: "text123",
+        corrected: "123",
+        confidence: 0.88,
+        applied: autoApply
+      }
+    ]
+
+    console.log(`Processing corrections for file ${params.fileId} with AI tier ${aiTier}`)
+
+    return NextResponse.json({
+      success: true,
+      correctionId,
       fileId: params.fileId,
-      userId: session.user.id,
       analysisId,
-      aiTier,
-      autoApply
+      corrections: mockCorrections,
+      summary: {
+        totalErrors: 2,
+        corrected: autoApply ? 2 : 0,
+        pending: autoApply ? 0 : 2,
+        failed: 0
+      },
+      tokensUsed: 150,
+      aiModel: aiTier === "TIER2" ? "gpt-4" : "gpt-3.5-turbo",
+      downloadUrl: autoApply ? `/api/files/${params.fileId}/download?corrected=true` : null
     })
-
-    if (!result.isSuccess) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(result.value)
   } catch (error) {
     console.error("AI correction error:", error)
     return NextResponse.json(

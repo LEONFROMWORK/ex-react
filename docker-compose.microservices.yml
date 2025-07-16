@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Excel Analysis Service (준비)
+  excel-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    environment:
+      - NODE_ENV=production
+      - SERVICE_NAME=excel-analysis
+      - PORT=3001
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Q&A Service (준비)
+  qa-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    environment:
+      - NODE_ENV=production
+      - SERVICE_NAME=qa-system
+      - PORT=3002
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - VECTOR_DB_URL=${VECTOR_DB_URL}
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # VBA Analysis Service (Python)
+  vba-service:
+    build:
+      context: ./services/vba-analyzer
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3003
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-exhell}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-exhell123}
+      - POSTGRES_DB=${POSTGRES_DB:-exhell}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - exhell-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx (Load Balancer)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+      - excel-service
+      - qa-service
+    networks:
+      - exhell-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  exhell-network:
+    driver: bridge

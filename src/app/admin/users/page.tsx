@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { UserTable } from "@/components/admin/UserTable"
 import { Loader2, Search, Filter, Download } from "lucide-react"
-import { GetUsersResponse } from "@/Features/Admin/UserManagement/GetUsers"
 import { useDebounce } from "@/hooks/use-debounce"
+import { USER_TIERS, TIER_LIMITS } from '@/lib/constants/user-tiers'
+import { AdminStatsService } from '@/lib/services/admin-stats.service'
+import { GetUsersResponse } from '@/Features/Admin/UserManagement/GetUsers'
 
 export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<GetUsersResponse | null>(null)
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [tierFilter, setTierFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [page, setPage] = useState(1)
   
@@ -22,7 +25,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers()
-  }, [page, debouncedSearch, roleFilter, statusFilter])
+  }, [page, debouncedSearch, roleFilter, tierFilter, statusFilter])
 
   const fetchUsers = async () => {
     try {
@@ -38,6 +41,10 @@ export default function AdminUsersPage() {
       
       if (roleFilter !== "all") {
         params.append("role", roleFilter)
+      }
+      
+      if (tierFilter !== "all") {
+        params.append("tier", tierFilter)
       }
       
       if (statusFilter !== "all") {
@@ -114,8 +121,22 @@ export default function AdminUsersPage() {
               <SelectContent>
                 <SelectItem value="all">모든 역할</SelectItem>
                 <SelectItem value="USER">일반 사용자</SelectItem>
+                <SelectItem value="SUPPORT">고객 지원</SelectItem>
                 <SelectItem value="ADMIN">관리자</SelectItem>
                 <SelectItem value="SUPER_ADMIN">최고 관리자</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={tierFilter} onValueChange={setTierFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="등급 필터" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">모든 등급</SelectItem>
+                {Object.entries(TIER_LIMITS).map(([tier, info]) => (
+                  <SelectItem key={tier} value={tier}>
+                    {info.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

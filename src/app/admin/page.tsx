@@ -1,192 +1,247 @@
-"use client"
-
-import { useEffect, useState } from "react"
+import { AdminStatsService } from '@/lib/services/admin-stats.service'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { StatsCard } from "@/components/admin/StatsCard"
-import { Loader2, Users, FileText, DollarSign, Activity, Cpu, TrendingUp, AlertCircle } from "lucide-react"
-import { GetDashboardStatsResponse } from "@/Features/Admin/Statistics/GetDashboardStats"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { 
+  Users, 
+  FileText, 
+  DollarSign, 
+  Activity, 
+  TrendingUp, 
+  AlertCircle,
+  Zap,
+  Crown,
+  Building2,
+  CreditCard,
+  Settings
+} from "lucide-react"
+import Link from "next/link"
+import { USER_TIERS, TIER_LIMITS } from '@/lib/constants/user-tiers'
 
-export default function AdminDashboardPage() {
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<GetDashboardStatsResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
+const tierIcons = {
+  [USER_TIERS.FREE]: null,
+  [USER_TIERS.BASIC]: Zap,
+  [USER_TIERS.PRO]: Crown,
+  [USER_TIERS.ENTERPRISE]: Building2
+}
 
-  useEffect(() => {
-    fetchDashboardStats()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchDashboardStats, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchDashboardStats = async () => {
-    try {
-      const response = await fetch("/api/admin/stats")
-      if (!response.ok) {
-        throw new Error("Failed to fetch stats")
-      }
-      const data = await response.json()
-      setStats(data)
-      setError(null)
-    } catch (err) {
-      setError("통계를 불러오는 중 오류가 발생했습니다")
-      console.error("Error fetching stats:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!stats) {
-    return null
-  }
-
+export default async function AdminDashboardPage() {
+  const statsService = AdminStatsService.getInstance()
+  const stats = await statsService.getDashboardStats()
+  
   return (
     <div className="space-y-8">
-      {/* Real-time Stats */}
+      {/* 주요 지표 */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">실시간 현황</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatsCard
-            title="활성 사용자"
-            value={stats.realtime.activeUsers}
-            icon={Users}
-            trend="neutral"
-          />
-          <StatsCard
-            title="처리 중인 파일"
-            value={stats.realtime.processingFiles}
-            icon={FileText}
-            trend="neutral"
-          />
-          <StatsCard
-            title="API 호출"
-            value={stats.realtime.apiCalls}
-            icon={Activity}
-            trend="neutral"
-          />
-          <StatsCard
-            title="Tier 1 AI"
-            value={stats.realtime.aiTier1Calls}
-            icon={Cpu}
-            trend="neutral"
-            description="오늘"
-          />
-          <StatsCard
-            title="Tier 2 AI"
-            value={stats.realtime.aiTier2Calls}
-            icon={Cpu}
-            trend="neutral"
-            description="오늘"
-          />
-        </div>
-      </div>
-
-      {/* Daily Stats */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">일일 통계</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatsCard
-            title="신규 가입"
-            value={stats.daily.newUsers}
-            icon={Users}
-            trend={stats.daily.newUsers > 0 ? "up" : "neutral"}
-            description="명"
-          />
-          <StatsCard
-            title="매출"
-            value={`₩${stats.daily.revenue.toLocaleString()}`}
-            icon={DollarSign}
-            trend={stats.daily.revenue > 0 ? "up" : "neutral"}
-          />
-          <StatsCard
-            title="처리 완료 파일"
-            value={stats.daily.filesProcessed}
-            icon={FileText}
-            trend="neutral"
-            description="개"
-          />
-          <StatsCard
-            title="오류 발생"
-            value={stats.daily.errors}
-            icon={AlertCircle}
-            trend={stats.daily.errors > 0 ? "down" : "neutral"}
-            description="건"
-          />
-          <StatsCard
-            title="절약된 토큰"
-            value={stats.daily.tokensSaved.toLocaleString()}
-            icon={TrendingUp}
-            trend={stats.daily.tokensSaved > 0 ? "up" : "neutral"}
-            description="개"
-          />
-          <StatsCard
-            title="비용 절감"
-            value={`$${stats.daily.aiCostOptimization.toFixed(2)}`}
-            icon={DollarSign}
-            trend={stats.daily.aiCostOptimization > 0 ? "up" : "neutral"}
-          />
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">전체 요약</h2>
+        <h2 className="text-xl font-semibold mb-4">주요 지표</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">총 사용자</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">전체 사용자</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{stats.summary.totalUsers.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">총 파일</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.summary.totalFiles.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">총 매출</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">₩{stats.summary.totalRevenue.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">평균 처리 시간</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {stats.summary.avgProcessingTime > 0 
-                  ? `${stats.summary.avgProcessingTime}초`
-                  : "N/A"
-                }
+              <div className="text-2xl font-bold">{stats.users.total.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                활성: {stats.users.active.toLocaleString()} | 신규: {stats.users.new}
               </p>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">월 매출</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₩{stats.revenue.monthly.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                주간: ₩{stats.revenue.weekly.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">파일 처리</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.usage.filesProcessed.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                평균 크기: {(stats.usage.averageFileSize / 1024 / 1024).toFixed(1)} MB
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">성공률</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.performance.successRate.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">
+                평균 처리: {stats.performance.averageProcessingTime.toFixed(1)}초
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      
+      {/* 등급별 사용자 분포 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>등급별 사용자 분포</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(stats.users.byTier).map(([tier, count]) => {
+                const Icon = tierIcons[tier as keyof typeof tierIcons]
+                const tierInfo = TIER_LIMITS[tier as keyof typeof TIER_LIMITS]
+                const percentage = stats.users.total > 0 ? (count / stats.users.total) * 100 : 0
+                
+                return (
+                  <div key={tier} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {Icon && <Icon className="h-5 w-5 text-primary" />}
+                      <div>
+                        <p className="font-medium">{tierInfo?.name || tier}</p>
+                        <p className="text-sm text-muted-foreground">{count.toLocaleString()} 사용자</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary">{percentage.toFixed(1)}%</Badge>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* 등급별 매출 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>등급별 매출</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(stats.revenue.byTier)
+                .filter(([_, revenue]) => revenue > 0)
+                .sort(([, a], [, b]) => b - a)
+                .map(([tier, revenue]) => {
+                  const Icon = tierIcons[tier as keyof typeof tierIcons]
+                  const tierInfo = TIER_LIMITS[tier as keyof typeof TIER_LIMITS]
+                  const percentage = stats.revenue.total > 0 ? (revenue / stats.revenue.total) * 100 : 0
+                  
+                  return (
+                    <div key={tier} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {Icon && <Icon className="h-5 w-5 text-primary" />}
+                        <div>
+                          <p className="font-medium">{tierInfo?.name || tier}</p>
+                          <p className="text-sm text-muted-foreground">₩{revenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary">{percentage.toFixed(1)}%</Badge>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* 사용량 통계 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>최근 30일 사용량</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">토큰 사용량</p>
+              <p className="text-2xl font-bold">{stats.usage.tokensUsed.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">오류 수정</p>
+              <p className="text-2xl font-bold">{stats.usage.errorsFixed.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">오류율</p>
+              <p className="text-2xl font-bold">{stats.performance.errorRate.toFixed(1)}%</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">총 매출</p>
+              <p className="text-2xl font-bold">₩{stats.revenue.total.toLocaleString()}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* 빠른 작업 */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">빠른 작업</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link href="/admin/users">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-base">사용자 관리</span>
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">사용자 정보 조회 및 관리</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/payments">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-base">결제 관리</span>
+                  <CreditCard className="h-5 w-5 text-muted-foreground" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">결제 내역 및 환불 처리</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/announcements">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-base">공지사항</span>
+                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">공지사항 작성 및 관리</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/settings">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-base">시스템 설정</span>
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">시스템 설정 및 구성</p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
     </div>

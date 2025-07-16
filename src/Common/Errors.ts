@@ -93,3 +93,51 @@ export const AdminErrors = {
     message: "권한이 부족합니다",
   } as Error,
 } as const;
+
+// AI Model errors
+export const AIModelErrors = {
+  NoModelsConfigured: {
+    code: "AIModel.NoModelsConfigured",
+    message: "설정된 AI 모델이 없습니다",
+  } as Error,
+
+  ModelNotFound: {
+    code: "AIModel.ModelNotFound",
+    message: "요청한 AI 모델을 찾을 수 없습니다",
+  } as Error,
+
+  InvalidConfiguration: {
+    code: "AIModel.InvalidConfiguration",
+    message: "AI 모델 설정이 올바르지 않습니다",
+  } as Error,
+
+  ApiKeyMissing: {
+    code: "AIModel.ApiKeyMissing",
+    message: "API 키가 누락되었습니다",
+  } as Error,
+
+  AllModelsFailed: {
+    code: "AIModel.AllModelsFailed",
+    message: "모든 AI 모델 호출이 실패했습니다",
+  } as Error,
+
+  RateLimitExceeded: {
+    code: "AIModel.RateLimitExceeded",
+    message: "API 호출 한도를 초과했습니다",
+  } as Error,
+
+  InvalidResponse: {
+    code: "AIModel.InvalidResponse",
+    message: "AI 모델로부터 잘못된 응답을 받았습니다",
+  } as Error,
+
+  ProviderError: {
+    code: "AIModel.ProviderError",
+    message: "AI 제공자 오류가 발생했습니다",
+  } as Error,
+
+  ValidationFailed: {
+    code: "AIModel.ValidationFailed",
+    message: "AI 모델 검증에 실패했습니다",
+  } as Error,
+} as const;
