@@ -265,4 +265,4 @@ function AdminDashboardClient({ stats }: { stats: any }) {
       </div>
     </div>
   )
-}}
+}
