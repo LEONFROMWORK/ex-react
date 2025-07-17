@@ -35,7 +35,9 @@
     "socket:dev": "node scripts/utils/socket-server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run socket:dev\"",
     "cache:flush": "redis-cli FLUSHDB",
-    "start:dev": "./start-dev.sh"
+    "start:dev": "./start-dev.sh",
+    "sync-knowledge": "tsx scripts/sync-knowledge-data.ts",
+    "sync-knowledge:help": "tsx scripts/sync-knowledge-data.ts --help"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",

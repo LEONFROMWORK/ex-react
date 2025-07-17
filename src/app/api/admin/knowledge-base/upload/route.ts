@@ -95,7 +95,7 @@ async function processFileAsync(jobId: string, filePath: string, fileName: strin
     
     // 2. 데이터 검증 및 전처리
     await updateJobStatus(jobId, 'processing', 30)
-    const processedData = await preprocessData(data, isBigDataFormat)
+    const processedData = await preprocessData(data)
     
     // 3. 임베딩 생성
     await updateJobStatus(jobId, 'generating_embeddings', 60)
@@ -167,9 +167,9 @@ async function parseFile(filePath: string): Promise<{ data: any[], isBigDataForm
   if (filePath.endsWith('.json')) {
     parsedData = JSON.parse(content)
     
-    // BigData 수집기 형식인지 확인
+    // BigData TRD 형식인지 확인 (표준 형식)
     if (parsedData.metadata && parsedData.qaData && Array.isArray(parsedData.qaData)) {
-      // BigData 형식
+      // BigData TRD 형식 - 표준으로 채택
       const allData = [
         ...parsedData.qaData,
         ...(parsedData.chainSolutions ? parsedData.chainSolutions.map((chain: any) => ({
@@ -190,56 +190,100 @@ async function parseFile(filePath: string): Promise<{ data: any[], isBigDataForm
         metadata: parsedData.metadata
       }
     } else if (Array.isArray(parsedData)) {
-      // 일반 JSON 배열
-      return { data: parsedData, isBigDataFormat: false }
+      // 레거시 JSON 배열 - BigData TRD 형식으로 변환
+      return { 
+        data: parsedData.map(item => convertToTRDFormat(item)), 
+        isBigDataFormat: true,
+        metadata: { convertedFromLegacy: true }
+      }
     } else {
-      // 단일 객체를 배열로 감싸기
-      return { data: [parsedData], isBigDataFormat: false }
+      // 단일 객체 - BigData TRD 형식으로 변환
+      return { 
+        data: [convertToTRDFormat(parsedData)], 
+        isBigDataFormat: true,
+        metadata: { convertedFromLegacy: true }
+      }
     }
   } else if (filePath.endsWith('.jsonl')) {
+    // JSONL 파일을 BigData TRD 형식으로 변환
     const data = content.split('\n')
       .filter(line => line.trim())
       .map(line => JSON.parse(line))
-    return { data, isBigDataFormat: false }
+      .map(item => convertToTRDFormat(item))
+    return { 
+      data, 
+      isBigDataFormat: true,
+      metadata: { convertedFromJSONL: true }
+    }
   }
   
   return { data: [], isBigDataFormat: false }
 }
 
-async function preprocessData(data: any[], isBigDataFormat: boolean): Promise<any[]> {
-  // 데이터 전처리 로직
-  return data.filter(item => {
-    if (isBigDataFormat) {
-      // BigData 형식 검증
-      return item.id && item.question && item.answer
-    } else {
-      // 일반 형식 검증
-      return item.id && item.question && item.answer && item.category
+// 레거시 형식을 BigData TRD 형식으로 변환하는 함수
+function convertToTRDFormat(item: any): any {
+  // 이미 TRD 형식인 경우 그대로 반환
+  if (item.qualityScore && item.source && item.metadata) {
+    return item
+  }
+  
+  // 레거시 형식을 TRD 형식으로 변환
+  return {
+    id: item.id || generateId(),
+    question: item.question || item.title || '',
+    answer: item.answer || item.content || '',
+    qualityScore: {
+      total: Math.round((item.quality_score || item.score || 5.0) * 10), // 0-100 스케일로 변환
+      breakdown: {
+        relevance: Math.round(((item.quality_score || 5.0) * 10) * 0.4),
+        clarity: Math.round(((item.quality_score || 5.0) * 10) * 0.3),
+        completeness: Math.round(((item.quality_score || 5.0) * 10) * 0.3)
+      }
+    },
+    source: item.source || 'manual',
+    metadata: {
+      category: item.category || 'general',
+      difficulty: item.difficulty || 'intermediate',
+      tags: item.tags || [],
+      originalData: item,
+      convertedAt: new Date().toISOString(),
+      ...((item.metadata && typeof item.metadata === 'object') ? item.metadata : {})
     }
+  }
+}
+
+// 간단한 ID 생성 함수
+function generateId(): string {
+  return `trd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+async function preprocessData(data: any[]): Promise<any[]> {
+  // BigData TRD 형식으로 데이터 전처리 (표준화)
+  return data.filter(item => {
+    // TRD 형식 기본 필드 검증
+    return item.id && item.question && item.answer
   }).map(item => {
-    if (isBigDataFormat) {
-      // BigData 형식 데이터 변환
-      return {
-        id: item.id,
-        question: item.question,
-        answer: item.answer,
-        category: item.metadata?.category || item.category || 'general',
-        quality_score: item.qualityScore?.total ? item.qualityScore.total / 100 : (item.quality_score || 0.5),
-        source: item.source || 'unknown',
-        difficulty: item.metadata?.difficulty || 'intermediate',
-        tags: item.metadata?.tags || [],
-        processed_at: new Date().toISOString(),
-        original_metadata: item.metadata,
-        is_chain_solution: item.isChainSolution || false
-      }
-    } else {
-      // 일반 형식 데이터 변환
-      return {
-        ...item,
-        quality_score: item.quality_score || 0.5,
-        source: item.source || 'manual',
-        processed_at: new Date().toISOString()
-      }
+    // BigData TRD 표준 형식으로 정규화
+    return {
+      id: item.id,
+      question: item.question,
+      answer: item.answer,
+      category: item.metadata?.category || item.category || 'general',
+      quality_score: item.qualityScore?.total ? item.qualityScore.total / 100 : (item.quality_score || 0.5),
+      source: item.source || 'unknown',
+      difficulty: item.metadata?.difficulty || 'intermediate',
+      tags: item.metadata?.tags || [],
+      processed_at: new Date().toISOString(),
+      original_metadata: item.metadata,
+      is_chain_solution: item.isChainSolution || false,
+      // TRD 고유 필드 추가
+      quality_breakdown: item.qualityScore?.breakdown || {
+        relevance: Math.round((item.quality_score || 0.5) * 40),
+        clarity: Math.round((item.quality_score || 0.5) * 30), 
+        completeness: Math.round((item.quality_score || 0.5) * 30)
+      },
+      trd_version: '1.0',
+      converted_at: new Date().toISOString()
     }
   })
 }
@@ -254,9 +298,40 @@ async function generateEmbeddings(data: any[]): Promise<any[]> {
 }
 
 async function saveToVectorDB(data: any[]): Promise<void> {
-  // 벡터 DB 저장 로직 (실제로는 ChromaDB, Pinecone 등 사용)
-  // 현재는 임시 구현
-  console.log(`벡터 DB에 ${data.length}개 항목 저장 완료`)
+  // VectorDB를 사용한 실제 저장 구현
+  const { VectorDB } = await import('@/lib/ai/vector-db')
+  const vectorDB = new VectorDB()
+  
+  try {
+    await vectorDB.initialize()
+    
+    // 각 데이터를 벡터 DB에 저장
+    for (const item of data) {
+      const documentText = `제목: ${item.question}\n\n답변: ${item.answer}\n\n카테고리: ${item.category}`
+      
+      await vectorDB.store({
+        id: item.id,
+        text: documentText,
+        embedding: item.embedding,
+        metadata: {
+          category: item.category,
+          quality_score: item.quality_score,
+          source: item.source,
+          difficulty: item.difficulty,
+          tags: item.tags,
+          processed_at: item.processed_at,
+          trd_version: item.trd_version
+        }
+      })
+    }
+    
+    console.log(`벡터 DB에 ${data.length}개 항목 저장 완료`)
+  } catch (error) {
+    console.error('벡터 DB 저장 실패:', error)
+    // 오류가 발생해도 로그만 출력하고 계속 진행 (Mock 구현을 사용하고 있으므로)
+  } finally {
+    await vectorDB.cleanup()
+  }
 }
 
 function getCategoryStats(data: any[]): { [key: string]: number } {

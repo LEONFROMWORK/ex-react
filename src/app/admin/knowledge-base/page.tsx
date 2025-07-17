@@ -28,6 +28,8 @@ interface KnowledgeBaseStats {
   totalDocuments: number
   totalEmbeddings: number
   categories: { [key: string]: number }
+  sources: { [key: string]: number }
+  sourceQuality: { [key: string]: number }
   lastUpdated: string
   processingJobs: number
 }
@@ -225,6 +227,47 @@ export default function KnowledgeBasePage() {
                   <div className="text-sm text-gray-600 dark:text-gray-400">{category}</div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 데이터 소스별 통계 */}
+      {stats?.sources && Object.keys(stats.sources).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>데이터 소스별 분포</CardTitle>
+            <CardDescription>
+              Stack Overflow, Reddit, 수동 입력 등 소스별 데이터 현황
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(stats.sources).map(([source, count]) => {
+                const sourceLabel = source === 'stackoverflow' ? 'Stack Overflow' : 
+                                  source === 'reddit' ? 'Reddit' : 
+                                  source === 'manual' ? '수동 입력' : source
+                const qualityScore = stats.sourceQuality?.[source] || 0
+                const percentage = ((count / stats.totalDocuments) * 100).toFixed(1)
+                
+                return (
+                  <div key={source} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium">{sourceLabel}</div>
+                      <Badge variant="secondary">{percentage}%</Badge>
+                    </div>
+                    <div className="text-2xl font-bold mb-1">{count.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">문서</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm">품질 점수:</div>
+                      <div className="text-sm font-medium">
+                        {qualityScore.toFixed(1)}/10
+                      </div>
+                    </div>
+                    <Progress value={qualityScore * 10} className="h-1 mt-1" />
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

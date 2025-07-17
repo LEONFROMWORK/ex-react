@@ -34,6 +34,11 @@ const nextConfig = {
         child_process: false,
       }
     }
+    
+    // ChromaDB는 빌드 시에만 제외 (런타임에는 동적 import 사용)
+    config.externals = config.externals || []
+    config.externals.push('chromadb')
+    
     return config
   },
 }

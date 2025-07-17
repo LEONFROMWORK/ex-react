@@ -19,6 +19,14 @@ export interface RAGResponse {
     category: string
     quality: number
     similarity: number
+    source: 'stackoverflow' | 'reddit' | 'manual'
+    sourceMetadata?: {
+      platform?: string
+      votes?: number
+      isAccepted?: boolean
+      opConfirmed?: boolean
+      threadUrl?: string
+    }
   }[]
   context: RAGContext
   processingTime: number
@@ -235,15 +243,19 @@ export class RAGService {
    * 프롬프트 구성
    */
   private buildPrompt(context: RAGContext): string {
-    const contextDocs = context.similarDocuments.map((doc, index) => 
-      `[참고자료 ${index + 1}] (카테고리: ${doc.metadata.category}, 품질: ${doc.metadata.quality_score.toFixed(2)})\n${doc.document.substring(0, 500)}...\n`
-    ).join('\n')
+    const contextDocs = context.similarDocuments.map((doc, index) => {
+      const source = this.determineDataSource(doc.metadata)
+      const sourceLabel = source === 'stackoverflow' ? 'Stack Overflow' : 
+                         source === 'reddit' ? 'Reddit' : '수동 입력'
+      
+      return `[참고자료 ${index + 1}] (출처: ${sourceLabel}, 카테고리: ${doc.metadata.category}, 품질: ${doc.metadata.quality_score.toFixed(2)})\n${doc.document.substring(0, 500)}...\n`
+    }).join('\n')
 
     return `당신은 Excel 전문가입니다. 사용자의 질문에 대해 제공된 참고자료를 바탕으로 정확하고 실용적인 답변을 제공하세요.
 
 사용자 질문: ${context.question}
 
-참고자료:
+참고자료 (Stack Overflow, Reddit 커뮤니티, 전문 자료 포함):
 ${contextDocs}
 
 답변 작성 지침:
@@ -251,8 +263,9 @@ ${contextDocs}
 2. 구체적인 Excel 함수나 단계별 해결 방법을 포함하세요
 3. 가능한 경우 예시를 들어 설명하세요
 4. 여러 해결 방법이 있다면 모두 제시하세요
-5. 한국어로 답변하세요
-6. 참고자료에 없는 내용은 추측하지 마세요
+5. Stack Overflow와 Reddit 등 다양한 커뮤니티의 경험을 활용하세요
+6. 한국어로 답변하세요
+7. 참고자료에 없는 내용은 추측하지 마세요
 
 답변:`
   }
@@ -290,8 +303,52 @@ ${contextDocs}
       title: this.extractTitle(doc.document),
       category: doc.metadata.category,
       quality: doc.metadata.quality_score,
-      similarity: doc.score
+      similarity: doc.score,
+      source: this.determineDataSource(doc.metadata),
+      sourceMetadata: this.extractSourceMetadata(doc.metadata)
     }))
+  }
+
+  /**
+   * 데이터 소스 판별
+   */
+  private determineDataSource(metadata: any): 'stackoverflow' | 'reddit' | 'manual' {
+    if (metadata.source === 'stackoverflow') return 'stackoverflow'
+    if (metadata.source === 'reddit') return 'reddit'
+    if (metadata.platform === 'stackoverflow') return 'stackoverflow'
+    if (metadata.platform === 'reddit') return 'reddit'
+    return 'manual'
+  }
+
+  /**
+   * 소스별 메타데이터 추출
+   */
+  private extractSourceMetadata(metadata: any): any {
+    const baseMetadata = {
+      platform: metadata.source || metadata.platform || 'unknown'
+    }
+
+    // Stack Overflow 메타데이터
+    if (metadata.source === 'stackoverflow' || metadata.platform === 'stackoverflow') {
+      return {
+        ...baseMetadata,
+        votes: metadata.score || metadata.votes || 0,
+        isAccepted: metadata.is_accepted || metadata.accepted || false,
+        threadUrl: metadata.url || metadata.link
+      }
+    }
+
+    // Reddit 메타데이터
+    if (metadata.source === 'reddit' || metadata.platform === 'reddit') {
+      return {
+        ...baseMetadata,
+        votes: metadata.submission_score || metadata.score || 0,
+        opConfirmed: metadata.op_confirmed || false,
+        threadUrl: metadata.reddit_url || metadata.url || metadata.permalink
+      }
+    }
+
+    return baseMetadata
   }
 
   /**
