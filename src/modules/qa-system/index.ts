@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis'
 import { QuestionClassifier } from './question-classifier'
 import { QADocument, SearchResult, QASystemOptions, CrawledData } from './types'
+import { RAGService, RAGResponse } from '../../lib/ai/rag-service'
 
 // 간단한 인메모리 벡터 DB 구현 (실제로는 ChromaDB/Pinecone 사용)
 class SimpleVectorDB {
@@ -74,6 +75,8 @@ export class QASystem {
   private cache: Redis | null = null
   private classifier: QuestionClassifier
   private options: QASystemOptions
+  private ragService: RAGService
+  private useRAG: boolean = false
   
   constructor(options: QASystemOptions = {}) {
     this.options = {
@@ -85,6 +88,7 @@ export class QASystem {
     
     this.vectorDB = new SimpleVectorDB()
     this.classifier = new QuestionClassifier()
+    this.ragService = new RAGService()
     
     // Redis 연결 (옵션)
     if (process.env.REDIS_URL) {
@@ -94,7 +98,16 @@ export class QASystem {
   
   async initialize() {
     console.log('Initializing Q&A System...')
-    // 실제로는 여기서 ChromaDB 연결 등을 수행
+    
+    // RAG 서비스 초기화 시도
+    try {
+      await this.ragService.initialize()
+      this.useRAG = true
+      console.log('RAG 서비스 초기화 성공 - 고급 모드 활성화')
+    } catch (error) {
+      console.warn('RAG 서비스 초기화 실패 - 기본 모드로 동작:', error)
+      this.useRAG = false
+    }
   }
   
   async loadDocuments(documents: QADocument[]) {
@@ -202,6 +215,29 @@ export class QASystem {
   }
   
   async generateAnswer(question: string, context: SearchResult[]): Promise<string> {
+    // RAG 서비스 사용 가능하면 고급 답변 생성
+    if (this.useRAG) {
+      try {
+        console.log('RAG 서비스로 답변 생성 중...')
+        const ragResponse = await this.ragService.generateAnswer(question)
+        
+        // RAG 답변이 충분히 신뢰할 만하면 사용
+        if (ragResponse.confidence > 0.5) {
+          console.log(`RAG 답변 생성 완료 (신뢰도: ${ragResponse.confidence.toFixed(2)})`)
+          return ragResponse.answer
+        }
+        
+        console.log('RAG 답변 신뢰도가 낮음 - 기본 시스템으로 폴백')
+      } catch (error) {
+        console.error('RAG 답변 생성 실패 - 기본 시스템으로 폴백:', error)
+      }
+    }
+    
+    // 기본 답변 생성 시스템 (기존 로직)
+    return this.generateLegacyAnswer(question, context)
+  }
+  
+  private async generateLegacyAnswer(question: string, context: SearchResult[]): Promise<string> {
     // 카테고리 분류
     const category = this.classifier.classify(question)
     const keywords = this.classifier.extractKeywords(question)
@@ -305,6 +341,104 @@ ${context.map(c => `Q: ${c.title}\nA: ${c.answer}`).join('\n\n')}
   
   extractKeywords(question: string): string[] {
     return this.classifier.extractKeywords(question)
+  }
+  
+  // RAG 관련 메서드들
+  async generateEnhancedAnswer(question: string): Promise<{
+    answer: string
+    confidence: number
+    sources: any[]
+    processingTime: number
+    method: 'rag' | 'legacy'
+  }> {
+    const startTime = Date.now()
+    
+    // RAG 서비스 사용 가능하면 고급 답변 생성
+    if (this.useRAG) {
+      try {
+        console.log('RAG 서비스로 고급 답변 생성 중...')
+        const ragResponse = await this.ragService.generateAnswer(question)
+        
+        return {
+          answer: ragResponse.answer,
+          confidence: ragResponse.confidence,
+          sources: ragResponse.sources,
+          processingTime: Date.now() - startTime,
+          method: 'rag'
+        }
+      } catch (error) {
+        console.error('RAG 답변 생성 실패:', error)
+      }
+    }
+    
+    // 기본 시스템으로 폴백
+    const context = await this.searchSimilar(question)
+    const answer = await this.generateLegacyAnswer(question, context)
+    
+    return {
+      answer,
+      confidence: context.length > 0 ? 0.6 : 0.3,
+      sources: context.map(c => ({
+        id: c.id,
+        title: c.title,
+        category: c.category,
+        similarity: c.similarity
+      })),
+      processingTime: Date.now() - startTime,
+      method: 'legacy'
+    }
+  }
+  
+  async addKnowledgeToRAG(qaData: any): Promise<void> {
+    if (this.useRAG) {
+      try {
+        await this.ragService.addKnowledge(qaData)
+        console.log('RAG 지식 베이스에 새 데이터 추가 완료')
+      } catch (error) {
+        console.error('RAG 지식 베이스 업데이트 실패:', error)
+      }
+    }
+  }
+  
+  async getRAGStats(): Promise<any> {
+    if (this.useRAG) {
+      try {
+        return await this.ragService.getKnowledgeStats()
+      } catch (error) {
+        console.error('RAG 통계 조회 실패:', error)
+        return null
+      }
+    }
+    return null
+  }
+  
+  isRAGEnabled(): boolean {
+    return this.useRAG
+  }
+  
+  async enableRAG(): Promise<void> {
+    if (!this.useRAG) {
+      try {
+        await this.ragService.initialize()
+        this.useRAG = true
+        console.log('RAG 서비스 활성화 완료')
+      } catch (error) {
+        console.error('RAG 서비스 활성화 실패:', error)
+        throw error
+      }
+    }
+  }
+  
+  disableRAG(): void {
+    this.useRAG = false
+    console.log('RAG 서비스 비활성화')
+  }
+
+  /**
+   * 레거시 호환성을 위한 searchSimilar 메서드 (searchSimilarQuestions의 별칭)
+   */
+  async searchSimilar(query: string, limit?: number): Promise<SearchResult[]> {
+    return this.searchSimilarQuestions(query, limit)
   }
 }
 

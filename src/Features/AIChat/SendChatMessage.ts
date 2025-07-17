@@ -3,6 +3,7 @@ import { Result } from "@/Common/Result"
 import { OpenAI } from "openai"
 import { prisma } from "@/lib/prisma"
 import { FineTuningLogger } from "@/lib/fine-tuning/logger"
+import { QASystem } from "@/modules/qa-system"
 
 // Request/Response types
 export class SendChatMessage {
@@ -94,6 +95,7 @@ export class ChatIntentClassifier {
 export class SendChatMessageHandler {
   private openai: OpenAI
   private fineTuningLogger: FineTuningLogger
+  private qaSystem: QASystem
   private readonly TIER1_MODEL = "gpt-3.5-turbo"
   private readonly TIER2_MODEL = "gpt-4"
   private readonly TIER1_COST_PER_TOKEN = 0.0005
@@ -104,6 +106,19 @@ export class SendChatMessageHandler {
       apiKey: process.env.OPENAI_API_KEY,
     })
     this.fineTuningLogger = new FineTuningLogger()
+    this.qaSystem = new QASystem()
+    
+    // QA 시스템 초기화
+    this.initializeQASystem()
+  }
+
+  private async initializeQASystem() {
+    try {
+      await this.qaSystem.initialize()
+      console.log('QA 시스템 초기화 완료')
+    } catch (error) {
+      console.error('QA 시스템 초기화 실패:', error)
+    }
   }
 
   async handle(request: SendChatMessageRequest): Promise<Result<SendChatMessageResponse>> {
@@ -145,6 +160,47 @@ export class SendChatMessageHandler {
     conversationId: string
   ): Promise<SendChatMessageResponse> {
     const startTime = Date.now()
+    
+    // 먼저 RAG 시스템으로 답변 시도
+    try {
+      const ragResult = await this.qaSystem.generateEnhancedAnswer(request.message)
+      
+      // RAG 답변이 충분히 신뢰할 만하면 사용
+      if (ragResult.confidence > 0.6) {
+        console.log(`RAG 답변 사용 (신뢰도: ${ragResult.confidence.toFixed(2)}, 방법: ${ragResult.method})`)
+        
+        // RAG 답변으로 응답 생성
+        const responseTime = Date.now() - startTime
+        await this.fineTuningLogger.logInteraction({
+          userId: request.userId,
+          sessionId: conversationId,
+          userQuery: request.message,
+          systemPrompt: 'RAG_ENHANCED_SYSTEM',
+          aiResponse: ragResult.answer,
+          responseTime,
+          tokenCount: 0, // RAG는 토큰 사용량 계산 안함
+          modelUsed: ragResult.method === 'rag' ? 'RAG_SYSTEM' : this.TIER1_MODEL,
+          excelContext: request.context,
+          taskType: this.determineTaskType(request.message)
+        })
+        
+        return {
+          conversationId,
+          messageId: crypto.randomUUID(),
+          response: ragResult.answer,
+          tokensUsed: 0,
+          estimatedCost: 0,
+          aiTier: "TIER1",
+          suggestions: this.extractSuggestions(ragResult.answer),
+        }
+      }
+      
+      console.log(`RAG 신뢰도 낮음 (${ragResult.confidence.toFixed(2)}) - 기존 시스템으로 폴백`)
+    } catch (error) {
+      console.error('RAG 답변 생성 실패 - 기존 시스템으로 폴백:', error)
+    }
+    
+    // 기존 Tier 1 시스템으로 폴백
     const systemPrompt = this.buildTier1SystemPrompt()
     const userPrompt = await this.buildUserPrompt(request)
 
@@ -197,6 +253,48 @@ export class SendChatMessageHandler {
     conversationId: string
   ): Promise<SendChatMessageResponse> {
     const startTime = Date.now()
+    
+    // 먼저 RAG 시스템으로 고품질 답변 시도
+    try {
+      const ragResult = await this.qaSystem.generateEnhancedAnswer(request.message)
+      
+      // RAG 답변이 Tier 2 수준으로 충분히 신뢰할 만하면 사용
+      if (ragResult.confidence > 0.5) {
+        console.log(`RAG 고급 답변 사용 (신뢰도: ${ragResult.confidence.toFixed(2)}, 방법: ${ragResult.method})`)
+        
+        // RAG 답변으로 응답 생성
+        const responseTime = Date.now() - startTime
+        await this.fineTuningLogger.logInteraction({
+          userId: request.userId,
+          sessionId: conversationId,
+          userQuery: request.message,
+          systemPrompt: 'RAG_ENHANCED_TIER2_SYSTEM',
+          aiResponse: ragResult.answer,
+          responseTime,
+          tokenCount: 0, // RAG는 토큰 사용량 계산 안함
+          modelUsed: ragResult.method === 'rag' ? 'RAG_SYSTEM' : this.TIER2_MODEL,
+          excelContext: request.context,
+          taskType: this.determineTaskType(request.message)
+        })
+        
+        return {
+          conversationId,
+          messageId: crypto.randomUUID(),
+          response: ragResult.answer,
+          tokensUsed: 0,
+          estimatedCost: 0,
+          aiTier: "TIER2",
+          suggestions: this.extractSuggestions(ragResult.answer),
+          attachments: await this.generateAttachments(ragResult.answer, request),
+        }
+      }
+      
+      console.log(`RAG 신뢰도 낮음 (${ragResult.confidence.toFixed(2)}) - 기존 Tier 2 시스템으로 폴백`)
+    } catch (error) {
+      console.error('RAG 고급 답변 생성 실패 - 기존 Tier 2 시스템으로 폴백:', error)
+    }
+    
+    // 기존 Tier 2 시스템으로 폴백
     const systemPrompt = this.buildTier2SystemPrompt()
     const userPrompt = await this.buildUserPrompt(request)
 
@@ -282,6 +380,7 @@ export class SendChatMessageHandler {
 2. 기본 템플릿 제공 가능
 3. 복잡한 요청시 "고급 AI 분석 필요" 명시
 4. 한국어로 응답
+5. 지식 베이스의 정보가 부족한 경우 일반적인 Excel 지식으로 보완
 `
   }
 
@@ -296,6 +395,8 @@ export class SendChatMessageHandler {
 3. 실행 가능한 코드나 수식 포함
 4. 최적화 제안 포함
 5. 한국어로 응답
+6. 지식 베이스의 정보를 활용하여 실제 사용자 경험 기반 답변
+7. 여러 해결 방법이 있다면 상황별 최적 방법 제시
 `
   }
 

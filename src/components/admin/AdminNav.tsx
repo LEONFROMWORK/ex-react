@@ -19,6 +19,7 @@ import {
   Brain,
   Settings,
   HeadphonesIcon,
+  Database,
 } from "lucide-react"
 import { useState, useMemo } from "react"
 import { USER_ROLES } from "@/lib/constants/user-roles"
@@ -137,6 +138,12 @@ export function AdminNav({ user }: AdminNavProps) {
             href: "/admin/ai-models",
             icon: Brain,
             roles: [USER_ROLES.SUPER_ADMIN]
+          },
+          {
+            title: "지식 베이스 관리",
+            href: "/admin/knowledge-base",
+            icon: Database,
+            roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN]
           },
           {
             title: "AI 정책 설정",
