@@ -7,16 +7,10 @@ providers = ["node"]
 nixPkgs = ["nodejs-18_x", "npm-9_x", "python310"]
 
 [phases.install]
-cmds = [
-  "rm -rf node_modules package-lock.json",
-  "npm install --legacy-peer-deps"
-]
+cmds = ["echo 'Skipping install phase'"]
 
 [phases.build]
-cmds = [
-  "npx prisma generate",
-  "npm run build"
-]
+cmds = ["bash scripts/railway-build.sh"]
 
 [start]
 cmd = "npm run start"
