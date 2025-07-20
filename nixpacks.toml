@@ -7,7 +7,10 @@ providers = ["node"]
 nixPkgs = ["nodejs-18_x", "npm-9_x", "python310"]
 
 [phases.install]
-cmds = ["npm install --legacy-peer-deps"]
+cmds = [
+  "rm -rf node_modules package-lock.json",
+  "npm install --legacy-peer-deps"
+]
 
 [phases.build]
 cmds = [
