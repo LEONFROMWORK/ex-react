@@ -1,32 +1,9 @@
-# Railway 배포 설정
 [build]
-buildCommand = "npx prisma generate && npx prisma migrate deploy && npm run build"
-watchPatterns = ["src/**", "package.json", "prisma/schema.prisma"]
+builder = "nixpacks"
+buildCommand = "npm install --legacy-peer-deps && npm run build"
 
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
+restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
-
-[variables]
-NODE_ENV = "production"
-DATABASE_URL = "${{ Postgres.DATABASE_URL }}"
-NEXTAUTH_URL = "${{ RAILWAY_PUBLIC_DOMAIN }}"
-NEXTAUTH_SECRET = "${{ secrets.NEXTAUTH_SECRET }}"
-OPENROUTER_API_KEY = "${{ secrets.OPENROUTER_API_KEY }}"
-OPENAI_API_KEY = "${{ secrets.OPENAI_API_KEY }}"
-
-# Railway 자동 스케일링 설정
-[scaling]
-minReplicas = 1
-maxReplicas = 10
-targetCPUUtilization = 70
-targetMemoryUtilization = 80
-
-# Railway 성능 최적화
-[runtime]
-memoryLimit = "32GB"
-cpuLimit = "8vCPU"
-timeout = "unlimited"
