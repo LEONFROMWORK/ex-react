@@ -6,8 +6,6 @@ nixpacksVersion = "1.17.0"
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/api/health"
-restartPolicyType = "on-failure"
-restartPolicyMaxRetries = 3
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
