@@ -4,8 +4,8 @@
   "description": "AI-powered Excel error correction and automation SaaS",
   "private": true,
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": "18.x",
+    "npm": "9.x"
   },
   "scripts": {
     "dev": "next dev",
