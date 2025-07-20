@@ -1,22 +1,22 @@
-# Exhell - AI 기반 엑셀 오류 수정 플랫폼
+# ExcelApp (Exhell) - AI Excel Analysis Platform
 
-엑셀 파일의 오류를 자동으로 감지하고 수정하는 AI 기반 SaaS 플랫폼입니다.
+AI 기반 엑셀 오류 분석 및 자동화 SaaS 플랫폼
 
-## 주요 기능
+## 🚀 주요 기능
 
-- 📊 **자동 오류 감지**: 수식 오류, 데이터 형식 오류, 참조 오류 등을 자동으로 감지
-- 🤖 **2단계 AI 시스템**: 비용 효율적인 AI 분석 (GPT-3.5 → GPT-4 자동 전환)
-- 🔧 **자동 수정**: AI가 제안하는 수정 사항을 자동으로 적용
-- 📈 **상세 리포트**: 오류 분석 및 수정 내역에 대한 상세 보고서
-- 💾 **안전한 파일 처리**: 암호화된 파일 저장 및 처리
+- **AI 기반 오류 감지**: OpenRouter API를 통한 지능형 엑셀 오류 분석
+- **다중 파일 분석**: 여러 엑셀 파일 동시 분석 지원
+- **실시간 진행 상황**: WebSocket을 통한 실시간 분석 진행률 표시
+- **관리자 전용 시스템**: OAuth 로그인 및 관리자 이메일 제한
 
-## 기술 스택
+## 🛠 기술 스택
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Next.js API Routes, Prisma, PostgreSQL
-- **AI**: OpenAI API (GPT-3.5-turbo, GPT-4)
-- **File Processing**: xlsx library
-- **Authentication**: NextAuth.js
+- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL
+- **AI**: OpenRouter (GPT-4, Claude 등 통합)
+- **Authentication**: NextAuth.js (Google, Kakao OAuth)
+- **Deployment**: Railway
 
 ## 시작하기
 

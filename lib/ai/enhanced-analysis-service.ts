@@ -43,6 +43,9 @@ export interface EnhancedAnalysisResult {
     processingTime: number;
     selectedModel: string;
     tokensUsed: number;
+    estimatedCost?: number;
+    tier?: string;
+    scenario?: any;
   };
 }
 
@@ -69,7 +72,7 @@ export class EnhancedAnalysisService {
               hasExcel: !!request.excelData,
               hasImages: request.imageDataArray.length > 0,
               query: request.query,
-              excelErrors: request.excelData?.errors?.length || 0
+              excelErrors: request.excelData?.summary?.totalErrors || 0
             });
             
             // 사용자가 선택한 티어가 있으면 우선 사용, 없으면 자동 선택
@@ -272,17 +275,21 @@ export class EnhancedAnalysisService {
   }
 
   private generateExcelSummary(excelData: ProcessedExcelData): string {
-    const { sheets, errors, formulas, statistics } = excelData;
+    const { sheets, summary: stats } = excelData;
+    
+    // Aggregate errors and formulas from all sheets
+    const allErrors = sheets.flatMap(sheet => sheet.errors || []);
+    const allFormulas = sheets.flatMap(sheet => sheet.formulas || []);
     
     let summary = `Excel 파일 분석 결과:\n`;
     summary += `- 시트 수: ${sheets.length}\n`;
-    summary += `- 총 행 수: ${statistics.totalRows}\n`;
-    summary += `- 총 열 수: ${statistics.totalColumns}\n`;
-    summary += `- 수식 수: ${statistics.formulaCount}\n\n`;
+    summary += `- 총 셀 수: ${stats.totalCells}\n`;
+    summary += `- 총 수식 수: ${stats.totalFormulas}\n`;
+    summary += `- 총 오류 수: ${stats.totalErrors}\n\n`;
     
-    if (errors.length > 0) {
+    if (allErrors.length > 0) {
       summary += `발견된 오류:\n`;
-      errors.forEach(error => {
+      allErrors.forEach(error => {
         summary += `- ${error.cell}: ${error.type} - ${error.value}\n`;
       });
       summary += '\n';
@@ -304,8 +311,11 @@ export class EnhancedAnalysisService {
     // 여기서는 예시 데이터 반환
     const comparisons = [];
     
-    if (excelData.errors.length > 0) {
-      excelData.errors.forEach(error => {
+    // Aggregate errors from all sheets
+    const allErrors = excelData.sheets.flatMap(sheet => sheet.errors || []);
+    
+    if (allErrors.length > 0) {
+      allErrors.forEach(error => {
         comparisons.push({
           aspect: '수식 오류',
           excelValue: error.value,
@@ -324,7 +334,10 @@ export class EnhancedAnalysisService {
     // 여기서는 예시 데이터 반환
     const corrections = [];
     
-    excelData.errors.forEach(error => {
+    // Aggregate errors from all sheets
+    const allErrors = excelData.sheets.flatMap(sheet => sheet.errors || []);
+    
+    allErrors.forEach(error => {
       if (error.type === '#DIV/0!') {
         corrections.push({
           cell: error.cell,
@@ -348,14 +361,16 @@ export class EnhancedAnalysisService {
   }
 
   private generateMockAnalysis(excelData: ProcessedExcelData, query?: string): string {
-    const hasErrors = excelData.errors.length > 0;
+    // Aggregate errors from all sheets
+    const allErrors = excelData.sheets.flatMap(sheet => sheet.errors || []);
+    const hasErrors = allErrors.length > 0;
     
     if (hasErrors) {
       return `## Excel 파일과 스크린샷 비교 분석 결과
 
 ### 🔍 발견된 주요 오류
 
-${excelData.errors.map(error => `
+${allErrors.map(error => `
 **${error.cell} 셀 오류**
 - 오류 유형: ${error.type}
 - 현재 수식: ${error.formula || 'N/A'}
@@ -489,3 +504,47 @@ ${query?.includes('차트') ? `
     }
   }
 }
+
+// Create singleton instance and helper functions
+const enhancedAnalysisService = new EnhancedAnalysisService();
+
+export const aiHelpers = {
+  analyzeExcel: async (params: any) => {
+    // Map old API to new EnhancedAnalysisService
+    return enhancedAnalysisService.analyze({
+      type: 'hybrid',
+      userId: params.userId,
+      userTier: params.userTier || 'TIER2',
+      sessionId: params.sessionId || Date.now().toString(),
+      excelData: params.excelData || { sheets: [], summary: { totalSheets: 0, totalCells: 0, totalFormulas: 0, totalErrors: 0 } },
+      imageDataArray: params.imageDataArray || [],
+      query: params.content || params.query,
+      options: params.options
+    });
+  },
+  
+  submitFeedback: async (params: any) => {
+    // Placeholder for feedback submission
+    console.log('Feedback received:', params);
+    return { success: true };
+  },
+  
+  getDashboardData: async (timeRange?: string) => {
+    // Placeholder for dashboard data
+    return {
+      totalAnalyses: 0,
+      activeUsers: 0,
+      errorRate: 0,
+      avgProcessingTime: 0
+    };
+  },
+  
+  getCostAnalysis: async () => {
+    // Placeholder for cost analysis
+    return {
+      totalCost: 0,
+      costByTier: {},
+      costTrend: []
+    };
+  }
+};

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Badge } from "@/components/ui/badge"
 import { UserTierBadge } from "@/components/user/UserTierBadge"
+import { isPaymentEnabled } from "@/lib/config/features"
 
 interface DashboardNavProps {
   user: {
@@ -61,11 +62,11 @@ export function DashboardNav({ user }: DashboardNavProps) {
       href: "/dashboard/history",
       icon: History,
     },
-    {
+    ...(isPaymentEnabled() ? [{
       title: "요금제",
       href: "/pricing",
       icon: CreditCard,
-    },
+    }] : []),
     {
       title: "추천하기",
       href: "/referral",
@@ -107,13 +108,21 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <UserTierBadge />
             
             {/* Token Balance */}
-            <Link href="/pricing" className="flex items-center space-x-2">
+            {isPaymentEnabled() ? (
+              <Link href="/pricing" className="flex items-center space-x-2">
+                <Badge variant="secondary" className="px-3 py-1">
+                  <Coins className="h-4 w-4 mr-1" />
+                  <span className="font-semibold">{credits}</span>
+                  <span className="text-xs ml-1">크레딧</span>
+                </Badge>
+              </Link>
+            ) : (
               <Badge variant="secondary" className="px-3 py-1">
                 <Coins className="h-4 w-4 mr-1" />
                 <span className="font-semibold">{credits}</span>
                 <span className="text-xs ml-1">크레딧</span>
               </Badge>
-            </Link>
+            )}
             
             <ThemeToggle />
             <DropdownMenu>

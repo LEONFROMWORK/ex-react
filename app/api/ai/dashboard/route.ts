@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/src/lib/auth';
 import { aiHelpers } from '@/lib/ai';
 
 // 관리자 전용 대시보드 API
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     // 관리자 권한 확인
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
 // 실시간 메트릭 스트리밍 (Server-Sent Events)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     if (!session?.user || session.user.role !== 'ADMIN') {
       return Response.json(
@@ -68,7 +67,7 @@ export async function POST(request: NextRequest) {
         const encoder = new TextEncoder();
         
         // 실시간 메트릭 스트리밍
-        const { PerformanceDashboard } = await import('@/lib/ai/performance-dashboard');
+        const { PerformanceDashboard } = await import('@/src/lib/ai/performance-dashboard');
         const dashboard = new PerformanceDashboard();
         
         const cleanup = await dashboard.streamRealtimeMetrics((metrics) => {

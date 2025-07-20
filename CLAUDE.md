@@ -6,142 +6,197 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ExcelApp (Exhell)** - AI-powered Excel error correction and automation SaaS platform
 - **Goal**: Automatically detect and fix Excel errors, generate optimized Excel files with AI
-- **Scale**: Up to 100 concurrent users  
-- **Tech Stack**: Remix + TypeScript (frontend), Express.js + TypeScript (backend), PostgreSQL + Prisma (database)
-
-## Architecture Principles
-
-This project follows **Vertical Slice Architecture** with SOLID principles:
-
-1. **Feature-First Organization**: Each business function is a self-contained vertical slice
-2. **3-Tier AI System**: Cost-efficient AI analysis using Mistral Small (Tier 1), Llama 4 Maverick (Tier 2), and GPT-4.1 Mini (Tier 3)
-3. **Progressive Enhancement**: Start simple, add complexity only when needed
-4. **Result Pattern**: Business errors use Result<T>, system errors use exceptions
-
-## Project Structure
-
-```
-src/
-├── Features/                    # All features organized as vertical slices
-│   ├── ExcelUpload/
-│   │   ├── UploadExcel.cs      # Request, Response, Handler, Validator
-│   │   ├── ExcelFileValidator.cs
-│   │   └── UploadExcel.Tests.cs
-│   ├── ExcelAnalysis/
-│   │   ├── AnalyzeErrors/
-│   │   └── GenerateReport/
-│   └── ExcelCorrection/
-├── Common/                      # Shared utilities only
-│   ├── Result.cs
-│   ├── Error.cs
-│   └── Extensions/
-├── Infrastructure/              # External dependencies
-│   ├── Persistence/
-│   ├── ExternalServices/
-│   └── BackgroundJobs/
-└── Host/                       # Application entry point
-    ├── Program.cs
-    └── PipelineBehaviors/
-```
+- **Tech Stack**: Next.js 14 (App Router), TypeScript, PostgreSQL, Prisma
+- **AI Integration**: Multi-tier system with OpenRouter for cost optimization
+- **Deployment**: Railway (primary), Vercel-ready
 
 ## Key Technologies
 
 ### Frontend
-- **Remix + TypeScript**: Server-side rendering framework
-- **Zustand**: State management (4KB, lightweight)
-- **Tailwind CSS + shadcn UI**: Styling and components
+- **Next.js 14**: App Router with server components
+- **TypeScript**: Type-safe development
+- **Tailwind CSS + shadcn/ui**: Styling and UI components
+- **Zustand**: Lightweight state management
 - **React Query**: Server state management
 - **react-dropzone**: File upload handling
+- **next-intl**: Internationalization (Korean/English)
 
 ### Backend  
-- **Express.js + TypeScript**: API server
-- **Prisma + PostgreSQL**: ORM and database
-- **ExcelJS**: Excel file processing
-- **Redis**: Caching and sessions (optional)
-- **Multi-Provider AI**: 3-tier AI system with Mistral, Llama, and OpenAI
+- **Next.js API Routes**: Serverless API endpoints
+- **Prisma + PostgreSQL**: Type-safe ORM and database
+- **ExcelJS + HyperFormula**: Advanced Excel processing
+- **Socket.IO**: Real-time progress updates
+- **OpenRouter API**: Unified AI provider (replaces direct OpenAI)
 
-### Infrastructure
-- **Railway**: Hosting platform with unlimited execution time
-- **Neon PostgreSQL**: Managed database (79% cost reduction)
-- **Sentry**: Error monitoring
-- **Posthog**: User analytics
-
-## AI System Architecture
-
-### 3-Tier AI Analysis
-1. **Tier 1 (Mistral Small)**: Basic error detection, cost-efficient
-2. **Tier 2 (Llama 4 Maverick)**: Intermediate analysis with moderate complexity
-3. **Tier 3 (GPT-4.1 Mini)**: Advanced analysis for complex scenarios
-
-### Confidence-Based Routing
-- Tier 1 confidence >85% → Use result
-- Tier 1 confidence 60-85% → Escalate to Tier 2
-- Tier 2 confidence <80% → Escalate to Tier 3
-- Rule-based analysis → Always free
-
-## Core Features
-
-1. **Excel Upload**: Drag-and-drop interface with validation
-2. **Error Detection**: Formula errors, data errors, format errors
-3. **AI Analysis**: 2-tier system for cost optimization  
-4. **Correction Suggestions**: Automated fixes with confidence scores
-5. **File Download**: Corrected files with detailed reports
-6. **AI Chat**: Natural language Excel generation requests
-7. **User Management**: Authentication, profiles, usage tracking
-8. **Billing**: Token-based pricing with subscription options
+### Payment Systems
+- **TossPayments**: Korean payment gateway
+- **Stripe**: International payment gateway
+- **Region-based routing**: Automatic gateway selection by user location
 
 ## Development Commands
 
-*Note: This appears to be a greenfield project. Common commands will be added as development progresses.*
+```bash
+# Development
+npm run dev              # Start development server (localhost:3000)
+npm run dev:all          # Start dev server + Socket.IO server concurrently
 
-## Development Guidelines
+# Build & Deploy
+npm run build            # Production build with Prisma generation
+npm run build:full       # Build + database migration
+npm run start            # Start production server
 
-1. **Vertical Slices**: Create new features as complete vertical slices
-2. **Start Simple**: Begin with Transaction Script pattern, refactor when complex
-3. **Controlled Duplication**: Allow duplication until third usage (Rule of Three)
-4. **AI Cost Management**: Use progressive escalation through 3-tier system based on complexity
-5. **Result Pattern**: Use Result<T> for business logic errors
-6. **Testing**: Focus on integration tests per slice, unit tests for complex logic only
+# Database
+npm run db:push          # Push Prisma schema to database
+npm run db:migrate       # Create migration
+npm run db:studio        # Open Prisma Studio GUI
+npm run db:seed          # Seed database with test data
 
-## Security Considerations
+# Code Quality
+npm run lint             # Run ESLint
+npm run typecheck        # TypeScript type checking
+npm run test             # Run Jest tests
+npm run test:e2e         # Run Cypress E2E tests
 
-- JWT authentication (Access: 15min, Refresh: 7 days)
-- File encryption (AES-256)
-- AI prompt sanitization and validation
-- Rate limiting: 60 requests/minute per IP
-- XSS/CSRF protection
+# AI System
+npm run ai:init          # Initialize AI system configuration
+npm run sync-knowledge   # Sync knowledge base data
+```
 
-## Performance Targets
+## AI System Architecture
 
-- API response: <200ms (95th percentile)
-- File upload: <5s (50MB files)
-- Tier 1 AI analysis: <10s  
-- Tier 2 AI analysis: <20s
-- Tier 3 AI analysis: <30s
-- Database connections: 20 pool size
+### 3-Tier Cost-Optimized System
+1. **TIER1 (Mistral 7B)**: Basic error detection, rule-based analysis
+   - Cost: ~$0.0001 per request
+   - Use: Simple formula errors, data validation
 
-## Key Database Models
+2. **TIER2 (GPT-4 Turbo)**: Complex analysis
+   - Cost: ~$0.01 per request
+   - Use: Complex formulas, multi-sheet dependencies
 
-- **User**: Authentication, preferences, AI tier settings
-- **Analysis**: AI analysis results with tier tracking and costs
-- **File**: Excel file metadata and processing status
-- **AIUsageStats**: Per-user AI consumption tracking
-- **AIPromptCache**: Response caching for cost optimization
+3. **TIER3 (GPT-4 Vision)**: Visual analysis
+   - Cost: ~$0.02 per request
+   - Use: Charts, images, visual data analysis
 
-## Anti-Patterns to Avoid
+### Routing Logic
+```typescript
+// Confidence-based escalation
+if (complexity < 30) return TIER1;
+if (complexity < 70 || hasVisualContent) return TIER2;
+return TIER3;
+```
 
-- ❌ Interfaces for everything
-- ❌ Premature abstractions  
-- ❌ Complex inheritance hierarchies
-- ❌ Excessive DRY pursuit
-- ❌ Enterprise patterns without justification
+## Project Structure
 
-## Development Phases
+```
+/
+├── app/                      # Next.js App Router
+│   ├── api/                 # API routes
+│   ├── [locale]/           # Internationalized pages
+│   └── globals.css         # Global styles
+├── components/              # React components
+│   ├── ui/                 # shadcn/ui components
+│   ├── ai/                 # AI-related components
+│   └── payment/            # Payment components
+├── src/
+│   ├── lib/                # Core business logic
+│   │   ├── ai/            # AI providers and logic
+│   │   ├── excel/         # Excel processing
+│   │   ├── payment/       # Payment providers
+│   │   └── utils/         # Utilities
+│   ├── messages/          # i18n translation files
+│   └── types/             # TypeScript definitions
+├── prisma/
+│   ├── schema.prisma      # Database schema
+│   └── seed.ts           # Database seeding
+└── public/                # Static assets
+```
 
-1. **MVP** (4 weeks): Auth, upload, basic analysis
-2. **AI Integration** (4 weeks): 3-tier AI system
-3. **Advanced Features** (3 weeks): AI chat, optimization
-4. **Billing System** (3 weeks): Payments, subscriptions
-5. **Community Features** (3 weeks): Referrals, reviews, admin
+## Core Features Implementation
 
-This is a cost-conscious SaaS application prioritizing efficient AI usage and maintainable architecture for a single developer.
+### Multi-File Analysis
+- Session-based file grouping
+- Parallel processing with progress tracking
+- WebSocket real-time updates via Socket.IO
+
+### Payment Integration
+```typescript
+// Automatic region detection
+const location = await locationDetector.detectUserLocation();
+const provider = location.region === 'KR' ? 'TOSS' : 'STRIPE';
+```
+
+### Internationalization
+- Default language: Korean (ko)
+- Supported: Korean, English, Japanese, Chinese
+- Automatic locale detection based on browser settings
+
+## Environment Variables
+
+Critical environment variables (see .env.example):
+```bash
+# Database
+DATABASE_URL="postgresql://..."
+
+# Authentication
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="..."
+
+# AI (OpenRouter - recommended)
+OPENROUTER_API_KEY="sk-or-v1-..."
+
+# Payment - Korea
+TOSS_CLIENT_KEY="test_ck_..."
+TOSS_SECRET_KEY="test_sk_..."
+
+# Payment - International  
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+
+# Feature Flags
+NEXT_PUBLIC_DEMO_MODE=true
+ENABLE_REGIONAL_ROUTING=true
+```
+
+## Database Schema
+
+Key models:
+- **User**: Authentication, subscription, usage limits
+- **Analysis**: AI analysis results with confidence scores
+- **ExcelFile**: File metadata and processing status
+- **AIUsage**: Token consumption tracking per tier
+- **Payment**: Transaction records with regional info
+
+## Performance Considerations
+
+- **File size limit**: 50MB (configurable)
+- **Concurrent analyses**: 5 per user
+- **API rate limiting**: 60 requests/minute
+- **AI response caching**: 24 hours for identical requests
+- **Database connection pooling**: 20 connections
+
+## Security
+
+- JWT authentication with refresh tokens
+- File encryption at rest (AES-256)
+- Prompt injection protection
+- XSS/CSRF protection via Next.js
+- API key rotation support
+
+## Testing Strategy
+
+- **Unit tests**: Business logic and utilities
+- **Integration tests**: API endpoints
+- **E2E tests**: Critical user flows
+- **AI mock responses**: For consistent testing
+
+## Deployment
+
+### Railway (Production)
+- Automatic deployments from main branch
+- PostgreSQL included
+- Environment variables via Railway dashboard
+
+### Local Development
+- PostgreSQL via Docker or local installation
+- Redis optional (falls back to memory)
+- Demo mode available without external services

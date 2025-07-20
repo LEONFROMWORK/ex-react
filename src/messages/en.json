@@ -1,0 +1,265 @@
+{
+  "common": {
+    "appName": "ExcelApp (Exhell)",
+    "tagline": "AI-Powered Excel Error Correction & Automation Platform",
+    "description": "Automatically detect and fix errors in Excel files, and generate optimized Excel files using AI",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "upload": "Upload",
+    "download": "Download",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "help": "Help",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register"
+  },
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "excel": {
+      "analyzer": "Excel Analyzer",
+      "multiFile": "Multi-File Analysis",
+      "tools": "Toolbox"
+    },
+    "features": "Features",
+    "pricing": "Pricing",
+    "support": "Support",
+    "profile": "Profile"
+  },
+  "home": {
+    "hero": {
+      "title": "Transform Your Excel Work with AI",
+      "subtitle": "Error detection, automatic correction, and AI-powered optimization",
+      "cta": {
+        "primary": "Start Free",
+        "secondary": "View Demo"
+      }
+    },
+    "features": {
+      "title": "Key Features",
+      "errorDetection": {
+        "title": "Smart Error Detection",
+        "description": "Automatically find formula errors, data inconsistencies, and formatting issues"
+      },
+      "aiAnalysis": {
+        "title": "AI-Powered Analysis",
+        "description": "Cost-effective and accurate analysis with our 2-tier AI system"
+      },
+      "autoCorrection": {
+        "title": "Auto-Correction Suggestions",
+        "description": "Get optimal correction suggestions with confidence scores"
+      },
+      "multiFile": {
+        "title": "Multi-File Processing",
+        "description": "Analyze and compare multiple Excel files simultaneously"
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Upload Files",
+        "description": "Simply drag and drop your Excel files to upload"
+      },
+      "step2": {
+        "title": "AI Analysis",
+        "description": "Advanced AI analyzes your files to find issues"
+      },
+      "step3": {
+        "title": "Review Results",
+        "description": "Get detailed analysis reports and correction suggestions"
+      },
+      "step4": {
+        "title": "Download Files",
+        "description": "Download corrected files and analysis reports"
+      }
+    }
+  },
+  "excel": {
+    "upload": {
+      "title": "Upload Excel Files",
+      "dragDrop": "Drag files here or click to select",
+      "supportedFormats": "Supported formats: .xlsx, .xls, .csv",
+      "maxSize": "Maximum file size: 50MB",
+      "multiple": "Multiple files allowed",
+      "analyzing": "Analyzing...",
+      "uploadSuccess": "Upload successful",
+      "uploadError": "Upload failed"
+    },
+    "analysis": {
+      "title": "Analysis Results",
+      "summary": "Summary",
+      "details": "Details",
+      "errors": {
+        "title": "Errors Found",
+        "formula": "Formula Errors",
+        "data": "Data Errors",
+        "format": "Format Errors",
+        "total": "Total Errors"
+      },
+      "suggestions": {
+        "title": "Correction Suggestions",
+        "confidence": "Confidence",
+        "apply": "Apply",
+        "applyAll": "Apply All",
+        "reject": "Reject"
+      }
+    },
+    "multiFile": {
+      "title": "Multi-File Analysis",
+      "addFile": "Add File",
+      "removeFile": "Remove File",
+      "compare": "Compare Analysis",
+      "session": {
+        "title": "Analysis Session",
+        "files": "Number of Files",
+        "status": "Status",
+        "progress": "Progress"
+      }
+    }
+  },
+  "ai": {
+    "tier1": {
+      "name": "Basic Analysis",
+      "description": "Fast and efficient basic error detection"
+    },
+    "tier2": {
+      "name": "Advanced Analysis",
+      "description": "Deep analysis for complex problems"
+    },
+    "tier3": {
+      "name": "Vision Analysis",
+      "description": "Visual analysis including images and charts"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
+  },
+  "tools": {
+    "title": "Excel Toolbox",
+    "formula": {
+      "title": "Formula Checker",
+      "description": "Validate Excel formula syntax and logic"
+    },
+    "data": {
+      "title": "Data Cleanup",
+      "description": "Remove duplicates, handle empty cells, normalize data"
+    },
+    "visualization": {
+      "title": "Chart Generator",
+      "description": "Recommend and generate optimal charts based on your data"
+    },
+    "template": {
+      "title": "Template Library",
+      "description": "Access various business Excel templates"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "or": "or",
+      "continueWith": "Continue with {provider}"
+    },
+    "register": {
+      "title": "Sign Up",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "terms": "I agree to the Terms of Service",
+      "privacy": "I agree to the Privacy Policy",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "logout": {
+      "message": "Are you sure you want to logout?",
+      "confirm": "Logout"
+    }
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "network": "Please check your network connection.",
+    "unauthorized": "Please login to continue.",
+    "forbidden": "You don't have permission to access this.",
+    "notFound": "Page not found.",
+    "serverError": "Server error occurred.",
+    "fileSize": "File size is too large.",
+    "fileType": "Unsupported file type.",
+    "validation": {
+      "required": "This field is required.",
+      "email": "Please enter a valid email address.",
+      "password": "Password must be at least 8 characters.",
+      "passwordMatch": "Passwords do not match."
+    }
+  },
+  "pricing": {
+    "title": "Pricing",
+    "subtitle": "Choose the plan that fits your needs",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "free": {
+      "name": "Free",
+      "price": "$0",
+      "features": [
+        "10 file analyses per month",
+        "Basic error detection",
+        "Standard support"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "$29",
+      "features": [
+        "100 file analyses per month",
+        "Advanced AI analysis",
+        "Priority support",
+        "API access"
+      ]
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "price": "Custom",
+      "features": [
+        "Unlimited file analyses",
+        "Dedicated AI model",
+        "24/7 support",
+        "On-premise option"
+      ]
+    }
+  },
+  "footer": {
+    "company": "Company",
+    "about": "About Us",
+    "careers": "Careers",
+    "contact": "Contact",
+    "legal": "Legal",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "cookie": "Cookie Policy",
+    "social": "Social Media",
+    "copyright": "© 2024 ExcelApp. All rights reserved."
+  }
+}

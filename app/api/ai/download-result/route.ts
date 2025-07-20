@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/src/lib/auth';
 import { ExcelProcessingService } from '@/src/Features/ExcelAnalysis/ExcelProcessingService';
 import { FileAssociationService } from '@/src/Features/ExcelUpload/FileAssociationService';
 import { FileRepository } from '@/src/Infrastructure/Repositories/FileRepository';
@@ -9,7 +8,7 @@ import { jsPDF } from 'jspdf';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
     
     if (!session?.user && !demoMode) {
@@ -75,7 +74,7 @@ export async function GET(request: NextRequest) {
       // 수정된 Excel 파일 생성
       const excelBuffer = await generateCorrectedExcel(
         excelFile,
-        analysisHistory.result.corrections || []
+        (analysisHistory.result as any).corrections || []
       );
       
       return new Response(excelBuffer, {
@@ -92,7 +91,7 @@ export async function GET(request: NextRequest) {
       // Excel 파일 추가
       const excelBuffer = await generateCorrectedExcel(
         excelFile,
-        analysisHistory.result.corrections || []
+        (analysisHistory.result as any).corrections || []
       );
       zip.file(`corrected-${excelFile.originalName}`, excelBuffer);
       
@@ -291,5 +290,5 @@ async function generatePDFReport(
     });
   }
   
-  return doc.output('arraybuffer');
+  return new Uint8Array(doc.output('arraybuffer') as ArrayBuffer);
 }

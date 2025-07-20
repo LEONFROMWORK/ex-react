@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/src/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -30,7 +29,7 @@ const saveHistorySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
     
     if (!session?.user && !demoMode) {
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
 // GET - 분석 이력 조회
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
     
     if (!session?.user && !demoMode) {
@@ -169,7 +168,7 @@ export async function GET(request: NextRequest) {
 // DELETE - 분석 이력 삭제
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user) {
       return Response.json(
         { error: '인증이 필요합니다.' },

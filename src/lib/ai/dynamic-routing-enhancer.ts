@@ -93,7 +93,7 @@ export class DynamicRoutingEnhancer {
     const costOptimizedModels = this.optimizeForCost(healthyModels, context);
 
     // 5. 최종 결정
-    const decision = this.makeRoutingDecision(
+    const decision = await this.makeRoutingDecision(
       historicalChoice,
       healthyModels,
       costOptimizedModels,
@@ -336,12 +336,12 @@ export class DynamicRoutingEnhancer {
   /**
    * 최종 라우팅 결정
    */
-  private makeRoutingDecision(
+  private async makeRoutingDecision(
     historicalChoice: string | null,
     healthyModels: string[],
     costOptimizedModels: string[],
     context: any
-  ): RoutingDecision {
+  ): Promise<RoutingDecision> {
     let selectedModel: string;
     let reason: string;
     let confidenceScore = 0.8;

@@ -140,13 +140,14 @@ export const progressManager = new AnalysisProgressManager();
 
 // Next.js API Route에서 WebSocket 초기화를 위한 헬퍼
 export function initializeWebSocket(res: NextApiResponse) {
-  if (!res.socket.server.io) {
+  const socketServer = (res.socket as any).server;
+  if (!socketServer.io) {
     console.log('Initializing Socket.IO...');
-    const io = new SocketIOServer(res.socket.server as any, {
+    const io = new SocketIOServer(socketServer as any, {
       path: '/api/socket',
       addTrailingSlash: false,
     });
-    res.socket.server.io = io;
-    progressManager.initialize(res.socket.server as any);
+    socketServer.io = io;
+    progressManager.initialize(socketServer as any);
   }
 }

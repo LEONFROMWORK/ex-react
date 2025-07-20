@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/src/lib/auth';
 import { aiHelpers } from '@/lib/ai';
 import { z } from 'zod';
 import { progressManager } from '@/lib/websocket/analysis-progress';
@@ -23,7 +22,7 @@ const analyzeRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 세션 확인 (데모 모드 지원)
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
     
     if (!session?.user && !demoMode) {
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
         const path = await import('path');
         const filePath = path.join(process.cwd(), excelFile.uploadUrl);
         const buffer = await fs.readFile(filePath);
-        excelBuffer = buffer.buffer;
+        excelBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       } else {
         excelBuffer = await fetch(excelFile.uploadUrl).then(res => res.arrayBuffer());
       }
@@ -97,7 +96,7 @@ export async function POST(request: NextRequest) {
           const path = await import('path');
           const filePath = path.join(process.cwd(), image.uploadUrl);
           const buffer = await fs.readFile(filePath);
-          imageBuffer = buffer.buffer;
+          imageBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
         } else {
           imageBuffer = await fetch(image.uploadUrl).then(res => res.arrayBuffer());
         }
@@ -195,7 +194,7 @@ export async function POST(request: NextRequest) {
 // 피드백 제출 엔드포인트
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user) {
       return Response.json(
         { error: '인증이 필요합니다.' },

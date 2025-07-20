@@ -52,7 +52,7 @@ interface AnalysisResultViewProps {
   };
 }
 
-export default function AnalysisResultView({ result }: AnalysisResultViewProps) {
+export function AnalysisResultView({ result }: AnalysisResultViewProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isDownloading, setIsDownloading] = useState(false);
 

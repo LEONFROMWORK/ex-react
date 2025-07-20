@@ -23,7 +23,7 @@ interface MultiFileAnalyzerProps {
   onAnalysisComplete?: (result: any) => void;
 }
 
-export default function MultiFileAnalyzer({ onAnalysisComplete }: MultiFileAnalyzerProps) {
+export function MultiFileAnalyzer({ onAnalysisComplete }: MultiFileAnalyzerProps) {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [analysisPrompt, setAnalysisPrompt] = useState('');
@@ -157,7 +157,7 @@ export default function MultiFileAnalyzer({ onAnalysisComplete }: MultiFileAnaly
     // 티어 추천
     const recommendation = TierRecommendationEngine.recommendTier(userProfile, context);
     setTierRecommendation(recommendation);
-    setSelectedTier(recommendation.recommendedTier);
+    setSelectedTier(recommendation.recommendedTier as 'TIER1' | 'TIER2' | 'TIER3');
     
     // 비용 예측
     const costEstimate = TierRecommendationEngine.estimateCost(

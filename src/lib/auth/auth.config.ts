@@ -1,82 +1,32 @@
 import type { NextAuthConfig } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-import { compare } from 'bcryptjs'
-import { z } from 'zod'
-
-// 로그인 스키마
-const loginSchema = z.object({
-  email: z.string().email('올바른 이메일 형식이 아닙니다'),
-  password: z.string().min(6, '비밀번호는 최소 6자 이상이어야 합니다')
-})
+import KakaoProvider from 'next-auth/providers/kakao'
 
 export const authConfig = {
   providers: [
-    // 이메일/비밀번호 로그인
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        const validatedFields = loginSchema.safeParse(credentials)
-        
-        if (!validatedFields.success) {
-          return null
-        }
-        
-        const { email, password } = validatedFields.data
-        
-        // Prisma를 직접 import하면 순환 참조 문제가 발생할 수 있으므로
-        // 실제 구현에서는 별도의 auth service를 만들어 사용하는 것을 권장
-        const { prisma } = await import('@/lib/prisma')
-        
-        const user = await prisma.user.findUnique({
-          where: { email }
-        })
-        
-        if (!user) {
-          return null
-        }
-        
-        const passwordsMatch = await compare(password, user.password)
-        
-        if (!passwordsMatch) {
-          return null
-        }
-        
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          credits: user.credits,
-          role: user.role,
-          tier: user.tier || 'FREE'
+    // Google OAuth
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
         }
       }
     }),
     
-    // Google OAuth (선택사항)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
-      GoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        authorization: {
-          params: {
-            prompt: "consent",
-            access_type: "offline",
-            response_type: "code"
-          }
-        }
-      })
-    ] : [])
+    // Kakao OAuth
+    KakaoProvider({
+      clientId: process.env.KAKAO_CLIENT_ID!,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET!,
+    })
   ],
   
   pages: {
     signIn: '/auth/login',
     error: '/auth/error',
-    newUser: '/auth/register'
   },
   
   callbacks: {
@@ -95,13 +45,64 @@ export const authConfig = {
       return true
     },
     
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // 관리자 이메일 확인
+      const adminEmail = process.env.ADMIN_EMAIL
+      
       if (user) {
+        // 관리자가 아닌 경우 로그인 차단
+        if (user.email !== adminEmail) {
+          throw new Error("Unauthorized: Admin access only")
+        }
+        
         token.id = user.id
-        token.tokens = user.tokens
-        token.role = user.role
-        token.tier = user.tier
+        token.tokens = user.tokens || 100 // 신규 가입자 기본 토큰
+        token.role = user.role || 'ADMIN'
+        token.tier = user.tier || 'FREE'
       }
+      
+      // OAuth 로그인 시 추가 정보 저장
+      if (account && user) {
+        // 관리자가 아닌 경우 로그인 차단
+        if (user.email !== adminEmail) {
+          throw new Error("Unauthorized: Admin access only")
+        }
+        
+        // 첫 OAuth 로그인 시 DB에 사용자 정보 저장
+        const { prisma } = await import('@/lib/prisma')
+        
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email! }
+        })
+        
+        if (!existingUser) {
+          // 관리자 계정 생성
+          const newUser = await prisma.user.create({
+            data: {
+              email: user.email!,
+              name: user.name || user.email!.split('@')[0],
+              credits: 1000, // 관리자 보너스
+              role: 'ADMIN',
+              tier: 'ENTERPRISE',
+              provider: account.provider,
+              providerId: account.providerAccountId,
+              referralCode: `ADMIN_${Date.now()}`, // 필수 필드
+            }
+          })
+          
+          token.id = newUser.id
+          token.tokens = newUser.credits
+          token.role = newUser.role
+          token.tier = newUser.tier
+        } else {
+          // 기존 사용자 정보 사용
+          token.id = existingUser.id
+          token.tokens = existingUser.credits
+          token.role = existingUser.role
+          token.tier = existingUser.tier
+        }
+      }
+      
       return token
     },
     

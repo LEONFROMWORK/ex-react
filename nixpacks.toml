@@ -1,0 +1,17 @@
+# Nixpacks configuration for Railway
+
+[phases.setup]
+nixPkgs = ["nodejs-18_x", "npm-9_x", "libuuid"]
+
+[phases.install]
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npx prisma generate", "npm run build"]
+
+[start]
+cmd = "npm run start"
+
+[variables]
+NODE_ENV = "production"
+PORT = "3000"

@@ -68,7 +68,6 @@ export default function ExcelAnalyzerPage() {
           {/* 분석 결과 */}
           <AnalysisResultView
             result={analysisResult}
-            sessionId={analysisResult.sessionId}
             onApplyCorrection={handleApplyCorrection}
             onDownloadCorrected={handleDownloadCorrected}
             onReanalyze={handleReanalyze}

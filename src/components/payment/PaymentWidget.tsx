@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { isPaymentEnabled } from "@/lib/config/features"
 
 interface PaymentWidgetProps {
   plan: "BASIC" | "PREMIUM" | "ENTERPRISE"
@@ -36,6 +37,17 @@ export function PaymentWidget({ plan, billingPeriod, onSuccess }: PaymentWidgetP
   const paymentWidgetRef = useRef<any>(null)
   const paymentMethodsWidgetRef = useRef<any>(null)
   const agreementWidgetRef = useRef<any>(null)
+
+  // 결제 기능이 비활성화된 경우 안내 메시지 표시
+  if (!isPaymentEnabled()) {
+    return (
+      <Alert>
+        <AlertDescription>
+          현재 결제 기능이 준비중입니다. 곧 서비스가 시작될 예정입니다.
+        </AlertDescription>
+      </Alert>
+    )
+  }
 
   const amount = PRICING[plan][billingPeriod]
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!

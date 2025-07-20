@@ -3,6 +3,7 @@ import { Check, X, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { isPaymentEnabled } from '@/lib/config/features'
 
 interface PricingTier {
   name: string
@@ -159,8 +160,9 @@ export function ConfidenceBasedPricing() {
               <Button 
                 className="w-full" 
                 variant={tier.popular ? 'default' : 'outline'}
+                disabled={!isPaymentEnabled() && tier.price !== '₩0'}
               >
-                {tier.price === '₩0' ? '무료로 시작하기' : '14일 무료 체험'}
+                {tier.price === '₩0' ? '무료로 시작하기' : (isPaymentEnabled() ? '14일 무료 체험' : '준비중')}
               </Button>
             </CardFooter>
           </Card>

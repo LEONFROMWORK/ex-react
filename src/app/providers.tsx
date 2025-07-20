@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useState } from "react"
-import { ThemeProvider } from "@/contexts/theme-context"
+import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import { SessionProvider } from "@/components/auth/SessionProvider"
 import { AuthInitializer } from "@/components/auth/AuthInitializer"
 
@@ -21,12 +21,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
-      <ThemeProvider>
+      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
         <QueryClientProvider client={queryClient}>
           <AuthInitializer />
           {children}
         </QueryClientProvider>
-      </ThemeProvider>
+      </NextThemesProvider>
     </SessionProvider>
   )
 }
