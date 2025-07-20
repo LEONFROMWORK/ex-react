@@ -1,0 +1,2 @@
+# Empty requirements.txt to satisfy Railway's Python detection
+# This is a Node.js project - see package.json

@@ -1,16 +1,22 @@
 # Nixpacks configuration for Railway
-# Force Node.js buildpack
+# Override Python detection and use Node.js
 
-providers = ["node"]
+providers = []
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "npm-9_x", "libuuid"]
+nixPkgs = ["nodejs-18_x", "npm-9_x", "python311"]
 
 [phases.install]
-cmds = ["npm install --legacy-peer-deps"]
+cmds = [
+  "echo 'Skipping Python install, this is a Node.js project'",
+  "npm install --legacy-peer-deps"
+]
 
 [phases.build]
-cmds = ["npx prisma generate", "npm run build"]
+cmds = [
+  "npx prisma generate",
+  "npm run build"
+]
 
 [start]
 cmd = "npm run start"
