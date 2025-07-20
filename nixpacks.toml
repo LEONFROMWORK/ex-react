@@ -1,16 +1,13 @@
 # Nixpacks configuration for Railway
-# Override Python detection and use Node.js
+# Force Node.js provider and fix Python version issue
 
-providers = []
+providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "npm-9_x", "python311"]
+nixPkgs = ["nodejs-18_x", "npm-9_x", "python310"]
 
 [phases.install]
-cmds = [
-  "echo 'Skipping Python install, this is a Node.js project'",
-  "npm install --legacy-peer-deps"
-]
+cmds = ["npm install --legacy-peer-deps"]
 
 [phases.build]
 cmds = [
@@ -25,3 +22,4 @@ cmd = "npm run start"
 NODE_ENV = "production"
 PORT = "3000"
 NIXPACKS_NODE_VERSION = "18"
+NIXPACKS_PYTHON_VERSION = "3.10"
