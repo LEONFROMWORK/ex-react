@@ -1,7 +1,7 @@
 # Nixpacks configuration for Railway
+# Force Node.js buildpack
 
-[providers]
-node = "18"
+providers = ["node"]
 
 [phases.setup]
 nixPkgs = ["nodejs-18_x", "npm-9_x", "libuuid"]
@@ -18,3 +18,4 @@ cmd = "npm run start"
 [variables]
 NODE_ENV = "production"
 PORT = "3000"
+NIXPACKS_NODE_VERSION = "18"
