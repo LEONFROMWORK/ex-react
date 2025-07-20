@@ -1,5 +1,8 @@
 # Nixpacks configuration for Railway
 
+[providers]
+node = "18"
+
 [phases.setup]
 nixPkgs = ["nodejs-18_x", "npm-9_x", "libuuid"]
 
