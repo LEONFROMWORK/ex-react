@@ -83,6 +83,7 @@ export class CreateReferralCodeHandler {
           data: {
             userId: request.userId,
             referralCode,
+            referralLink: `${process.env.NEXT_PUBLIC_APP_URL || 'https://exhell.com'}/signup?ref=${referralCode}`,
           },
         })
 

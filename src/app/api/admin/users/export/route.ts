@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         name: true,
         role: true,
         tier: true,
-        tokens: true,
+        credits: true,
         emailVerified: true,
         createdAt: true,
         lastActiveAt: true,
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           select: {
             files: true,
             analyses: true,
-            tokenTransactions: true
+            creditTransactions: true
           }
         }
       },
@@ -50,13 +50,13 @@ export async function GET(request: NextRequest) {
       '이메일',
       '역할',
       '등급',
-      '토큰 잔액',
+      '크레딧 잔액',
       '이메일 인증',
       '가입일',
       '마지막 활동',
       '파일 수',
       '분석 수',
-      '토큰 거래 수'
+      '크레딧 거래 수'
     ]
 
     const rows = users.map(user => [
@@ -65,13 +65,13 @@ export async function GET(request: NextRequest) {
       user.email,
       user.role,
       user.tier || 'FREE',
-      user.tokens,
+      user.credits,
       user.emailVerified ? '인증됨' : '미인증',
       format(new Date(user.createdAt), 'yyyy-MM-dd HH:mm:ss'),
       user.lastActiveAt ? format(new Date(user.lastActiveAt), 'yyyy-MM-dd HH:mm:ss') : '',
-      user._count.files,
-      user._count.analyses,
-      user._count.tokenTransactions
+      user._count?.files || 0,
+      user._count?.analyses || 0,
+      user._count?.creditTransactions || 0
     ])
 
     // Add BOM for Excel UTF-8 compatibility

@@ -53,7 +53,7 @@ export class RedisCacheService {
       })
 
       // 모든 에러를 조용히 처리
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: any) => {
         // 연결 오류는 무시 (로그만 남김)
         if (err.code === 'ECONNREFUSED') {
           if (this.isConnected) {

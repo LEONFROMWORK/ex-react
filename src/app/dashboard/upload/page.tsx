@@ -158,10 +158,11 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Excel 파일 선택</CardTitle>
-          <CardDescription>
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-indigo-50 dark:from-blue-950/30 dark:via-cyan-950/30 dark:to-indigo-950/30">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-indigo-500/5" />
+        <CardHeader className="relative">
+          <CardTitle className="text-blue-700 dark:text-blue-300">Excel 파일 선택</CardTitle>
+          <CardDescription className="text-blue-600/70 dark:text-blue-300/70">
             지원 형식: XLSX, XLS, CSV (최대 50MB)
           </CardDescription>
         </CardHeader>
@@ -209,18 +210,21 @@ export default function UploadPage() {
                 </Button>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800 flex-1">
+              <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30 border-0 rounded-lg p-4">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5" />
+                <div className="relative flex items-start space-x-2">
+                  <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                    <AlertCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="text-sm text-emerald-800 dark:text-emerald-200 flex-1">
                     <p className="font-medium mb-1">파일이 준비되었습니다</p>
                     <p>업로드 버튼을 클릭하면 파일 분석이 시작됩니다.</p>
                     <div className="mt-2 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Coins className="h-4 w-4" />
+                        <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         <span>예상 토큰 사용량: {calculateEstimatedTokens(uploadedFile.size)}개</span>
                       </div>
-                      <Badge variant={userTokens >= calculateEstimatedTokens(uploadedFile.size) ? "default" : "destructive"}>
+                      <Badge variant={userTokens >= calculateEstimatedTokens(uploadedFile.size) ? "default" : "destructive"} className="bg-emerald-600 dark:bg-emerald-700">
                         잔액: {userTokens} 토큰
                       </Badge>
                     </div>
@@ -265,9 +269,10 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>업로드 전 확인사항</CardTitle>
+      <Card className="mt-6 relative overflow-hidden border-0 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-red-950/30">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-red-500/5" />
+        <CardHeader className="relative">
+          <CardTitle className="text-amber-700 dark:text-amber-300">업로드 전 확인사항</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm text-gray-600">

@@ -442,7 +442,7 @@ export default function KnowledgeBaseUploadPage() {
                             <div className="flex flex-wrap gap-2">
                               {Object.entries(datasetPreview.stats.sources).map(([source, count]) => (
                                 <Badge key={source} variant="secondary">
-                                  {source}: {count}
+                                  {source}: {count as string}
                                 </Badge>
                               ))}
                             </div>

@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { AdminDashboard } from '@/app/admin/page'
+import '@testing-library/jest-dom'
+import AdminDashboard from '@/app/admin/page'
 import { prisma } from '@/lib/prisma'
 
 // Mock fetch API

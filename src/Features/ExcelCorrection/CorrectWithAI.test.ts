@@ -1,11 +1,11 @@
 import { CorrectWithAIHandler } from './CorrectWithAI'
-import { ConsumeTokensHandler } from '@/Features/Billing/TokenManagement/ConsumeTokens'
+import { ConsumeTokensHandler } from '@/Features/Billing/CreditManagement/ConsumeCredits'
 import { prisma } from '@/lib/prisma'
 import * as aiAnalyzer from '@/lib/ai/analyzer'
 import * as XLSX from 'xlsx'
 
 jest.mock('@/lib/ai/analyzer')
-jest.mock('@/Features/Billing/TokenManagement/ConsumeTokens')
+jest.mock('@/Features/Billing/CreditManagement/ConsumeCredits')
 jest.mock('xlsx')
 jest.mock('fs/promises')
 

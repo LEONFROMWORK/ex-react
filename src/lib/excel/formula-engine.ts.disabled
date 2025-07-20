@@ -1,0 +1,579 @@
+import { HyperFormula, ConfigParams } from "hyperformula"
+import ExcelJS from "exceljs"
+
+export interface FormulaValidationResult {
+  isValid: boolean
+  error?: string
+  result?: any
+  errorType?: string
+}
+
+export interface FormulaOptimization {
+  original: string
+  optimized: string
+  suggestion: string
+  performanceGain?: string
+}
+
+export interface CircularReference {
+  cells: string[]
+  description: string
+  severity: 'warning' | 'error'
+}
+
+export interface FormulaDependency {
+  precedents: string[]
+  dependents: string[]
+  level: number
+}
+
+export class FormulaEngine {
+  private hf: HyperFormula
+  private sheetIdMap: Map<string, number> = new Map()
+  private isInitialized: boolean = false
+
+  constructor() {
+    // HyperFormula 설정 - 최적화된 구성
+    const options: Partial<ConfigParams> = {
+      licenseKey: "gpl-v3", // GPL 라이센스 사용
+      useColumnIndex: false, // A1 notation 사용
+      dateFormats: ["YYYY-MM-DD", "YYYY/MM/DD", "DD/MM/YYYY", "MM/DD/YYYY"],
+      functionArgSeparator: ",",
+      decimalSeparator: ".",
+      thousandSeparator: ",",
+      arrayColumnSeparator: ",",
+      arrayRowSeparator: ";",
+      // 성능 최적화 설정
+      evaluateNullToZero: false,
+      precisionRounding: 14, // Excel과 동일한 정밀도
+      useStats: true,
+      // 계산 최적화
+      useArrayArithmetic: true,
+      matrixDetection: true,
+      matrixDetectionThreshold: 40
+    }
+
+    this.hf = HyperFormula.buildEmpty(options as ConfigParams)
+    this.isInitialized = true
+  }
+
+  /**
+   * ExcelJS 워크북의 데이터를 HyperFormula로 로드
+   */
+  async loadWorkbook(workbook: ExcelJS.Workbook): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('FormulaEngine is not initialized')
+    }
+
+    try {
+      // 기존 시트 정리
+      this.clearAllSheets()
+
+      // 각 워크시트를 HyperFormula 시트로 변환
+      for (const worksheet of workbook.worksheets) {
+        await this.loadWorksheet(worksheet)
+      }
+    } catch (error) {
+      throw new Error(`Failed to load workbook: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * 단일 워크시트 로드
+   */
+  async loadWorksheet(worksheet: ExcelJS.Worksheet): Promise<number> {
+    const sheetData = this.extractSheetData(worksheet)
+    const sheetName = worksheet.name || `Sheet${this.sheetIdMap.size + 1}`
+    
+    // HyperFormula에 시트 추가
+    const sheetId = this.hf.addSheet(sheetName)
+    this.sheetIdMap.set(sheetName, Number(sheetId))
+    
+    if (sheetData.length > 0) {
+      // 데이터를 배치로 설정하여 성능 향상
+      this.hf.setSheetContent(Number(sheetId), sheetData)
+    }
+    
+    return Number(sheetId)
+  }
+
+  /**
+   * ExcelJS 워크시트에서 데이터 추출
+   */
+  private extractSheetData(worksheet: ExcelJS.Worksheet): any[][] {
+    const data: any[][] = []
+    const maxRow = worksheet.rowCount
+    const maxCol = worksheet.columnCount
+
+    // 모든 행과 열을 순회
+    for (let rowNum = 1; rowNum <= maxRow; rowNum++) {
+      const rowData: any[] = []
+      const row = worksheet.getRow(rowNum)
+      
+      for (let colNum = 1; colNum <= maxCol; colNum++) {
+        const cell = row.getCell(colNum)
+        
+        if (cell.type === ExcelJS.ValueType.Formula) {
+          // 수식인 경우 수식 문자열 저장
+          rowData.push(cell.formula || cell.value)
+        } else if (cell.type === ExcelJS.ValueType.Date) {
+          // 날짜는 ISO 형식으로 변환
+          const dateValue = cell.value as Date
+          rowData.push(dateValue.toISOString().split('T')[0])
+        } else {
+          // 일반 값
+          rowData.push(cell.value)
+        }
+      }
+      
+      data.push(rowData)
+    }
+    
+    return data
+  }
+
+  /**
+   * 수식 검증 및 오류 확인 (개선된 버전)
+   */
+  validateFormula(formula: string, sheetName?: string): FormulaValidationResult {
+    if (!this.isInitialized) {
+      return { isValid: false, error: "FormulaEngine이 초기화되지 않았습니다" }
+    }
+
+    // 수식이 '='로 시작하지 않으면 추가
+    const normalizedFormula = formula.startsWith('=') ? formula : `=${formula}`
+
+    try {
+      const sheetId = this.getSheetId(sheetName)
+      if (sheetId === null) {
+        return { isValid: false, error: "시트를 찾을 수 없습니다" }
+      }
+
+      // 임시 위치에서 수식 평가 (더 안전한 위치 사용)
+      const tempAddress = this.findEmptyCell(sheetId)
+      
+      // 수식 설정 및 평가
+      this.hf.setCellContents(tempAddress, normalizedFormula)
+      const result = this.hf.getCellValue(tempAddress)
+      
+      // 오류 확인
+      if (this.isErrorResult(result)) {
+        const errorInfo = this.parseErrorResult(result)
+        // 임시 셀 정리
+        this.hf.setCellContents(tempAddress, null)
+        
+        return {
+          isValid: false,
+          error: errorInfo.message,
+          errorType: errorInfo.type,
+          result: result
+        }
+      }
+      
+      // 순환 참조는 오류 결과에서 확인 (isCellPartOfCycle 메소드 미지원)
+      // 이미 위에서 오류 확인 시 CYCLE 타입 체크함
+      
+      // 정리
+      this.hf.setCellContents(tempAddress, null)
+      
+      return { 
+        isValid: true, 
+        result,
+        error: undefined,
+        errorType: undefined
+      }
+    } catch (error) {
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        errorType: "SYSTEM_ERROR"
+      }
+    }
+  }
+
+  /**
+   * 고급 수식 분석
+   */
+  analyzeFormula(formula: string, sheetName?: string): {
+    validation: FormulaValidationResult
+    optimization?: FormulaOptimization
+    dependencies: FormulaDependency
+    complexity: 'simple' | 'medium' | 'complex'
+    volatileFunctions: string[]
+  } {
+    const validation = this.validateFormula(formula, sheetName)
+    const optimization = this.optimizeFormula(formula)
+    
+    // 의존성 분석은 실제 셀에 적용해야 하므로 임시로 설정
+    const sheetId = this.getSheetId(sheetName) || 0
+    const tempAddress = this.findEmptyCell(sheetId)
+    
+    let dependencies: FormulaDependency = { precedents: [], dependents: [], level: 0 }
+    let volatileFunctions: string[] = []
+    
+    try {
+      this.hf.setCellContents(tempAddress, formula.startsWith('=') ? formula : `=${formula}`)
+      dependencies = this.getFormulaDependencies(tempAddress)
+      volatileFunctions = this.findVolatileFunctions(formula)
+      this.hf.setCellContents(tempAddress, null)
+    } catch (error) {
+      // 오류 발생 시 기본값 유지
+    }
+    
+    const complexity = this.calculateComplexity(formula, dependencies)
+    
+    return {
+      validation,
+      optimization: optimization || undefined,
+      dependencies,
+      complexity,
+      volatileFunctions
+    }
+  }
+
+  /**
+   * 수식 재계산
+   */
+  recalculate(): void {
+    this.hf.rebuildAndRecalculate()
+  }
+
+  /**
+   * 특정 셀의 수식 평가
+   */
+  evaluateCell(sheetName: string, row: number, col: number): any {
+    const sheetId = this.hf.getSheetId(sheetName)
+    if (sheetId === null || sheetId === undefined) return null
+    
+    return this.hf.getCellValue({ sheet: sheetId as number, row: row - 1, col: col - 1 })
+  }
+
+  /**
+   * 수식 의존성 분석
+   */
+  getDependencies(sheetName: string, row: number, col: number): {
+    precedents: string[]
+    dependents: string[]
+  } {
+    const sheetId = this.hf.getSheetId(sheetName)
+    if (sheetId === null || sheetId === undefined) return { precedents: [], dependents: [] }
+    
+    const address = { sheet: sheetId as number, row: row - 1, col: col - 1 }
+    
+    // 선행 셀 (이 셀이 참조하는 셀들)
+    const precedents = this.hf.getCellPrecedents(address)
+    const precedentsList = precedents.map((addr: any) => 
+      `${this.hf.getSheetName(addr.sheet)}!${this.cellAddressToA1(addr.row + 1, addr.col + 1)}`
+    )
+    
+    // 종속 셀 (이 셀을 참조하는 셀들)
+    const dependents = this.hf.getCellDependents(address)
+    const dependentsList = dependents.map((addr: any) => 
+      `${this.hf.getSheetName(addr.sheet)}!${this.cellAddressToA1(addr.row + 1, addr.col + 1)}`
+    )
+    
+    return {
+      precedents: precedentsList,
+      dependents: dependentsList
+    }
+  }
+
+  /**
+   * 수식 최적화 제안
+   */
+  optimizeFormula(formula: string): {
+    original: string
+    optimized: string
+    suggestion: string
+  } | null {
+    // VLOOKUP을 INDEX/MATCH로 변환
+    if (formula.includes("VLOOKUP")) {
+      const vlookupRegex = /VLOOKUP\s*\(\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^)]+)\)/i
+      const match = formula.match(vlookupRegex)
+      
+      if (match) {
+        const [, lookupValue, tableArray, colIndex, rangeLookup] = match
+        const optimized = `INDEX(${tableArray},MATCH(${lookupValue},INDEX(${tableArray},0,1),${rangeLookup}),${colIndex})`
+        
+        return {
+          original: formula,
+          optimized: optimized,
+          suggestion: "VLOOKUP을 INDEX/MATCH로 변환하면 성능이 향상됩니다"
+        }
+      }
+    }
+    
+    // 휘발성 함수 감지
+    const volatileFunctions = ["NOW", "TODAY", "RAND", "RANDBETWEEN", "INDIRECT", "OFFSET"]
+    for (const func of volatileFunctions) {
+      if (formula.toUpperCase().includes(func)) {
+        return {
+          original: formula,
+          optimized: formula,
+          suggestion: `${func}는 휘발성 함수입니다. 재계산 시 성능에 영향을 줄 수 있습니다.`
+        }
+      }
+    }
+    
+    return null
+  }
+
+  /**
+   * 순환 참조 감지
+   */
+  detectCircularReferences(): Array<{
+    cells: string[]
+    description: string
+  }> {
+    const errors: Array<{ cells: string[]; description: string }> = []
+    
+    // 모든 시트 검사
+    const sheetNames = this.hf.getSheetNames()
+    
+    for (const sheetName of sheetNames) {
+      const sheetId = this.hf.getSheetId(sheetName)
+      if (sheetId === null || sheetId === undefined) continue
+      
+      const sheetData = this.hf.getSheetValues(sheetId as number)
+      
+      for (let row = 0; row < sheetData.length; row++) {
+        for (let col = 0; col < sheetData[row].length; col++) {
+          const value = this.hf.getCellValue({ sheet: sheetId, row, col })
+          
+          if (value && typeof value === "object" && (value as any).error === "CYCLE") {
+            const cellAddress = `${sheetName}!${this.cellAddressToA1(row + 1, col + 1)}`
+            errors.push({
+              cells: [cellAddress],
+              description: "순환 참조가 감지되었습니다"
+            })
+          }
+        }
+      }
+    }
+    
+    return errors
+  }
+
+  /**
+   * 셀 주소를 A1 표기법으로 변환
+   */
+  private cellAddressToA1(row: number, col: number): string {
+    let columnName = ""
+    let columnNumber = col
+    
+    while (columnNumber > 0) {
+      const modulo = (columnNumber - 1) % 26
+      columnName = String.fromCharCode(65 + modulo) + columnName
+      columnNumber = Math.floor((columnNumber - modulo) / 26)
+    }
+    
+    return columnName + row
+  }
+
+  /**
+   * 오류 메시지 번역
+   */
+  private translateError(error: string): string {
+    const errorTranslations: Record<string, string> = {
+      "VALUE": "잘못된 값 타입입니다",
+      "NUM": "숫자 오류입니다",
+      "DIV_BY_ZERO": "0으로 나눌 수 없습니다",
+      "NAME": "이름을 찾을 수 없습니다",
+      "N/A": "값을 사용할 수 없습니다",
+      "CYCLE": "순환 참조입니다",
+      "REF": "잘못된 참조입니다",
+      "SPILL": "배열 수식 결과가 다른 셀과 충돌합니다",
+      "CALC": "계산 오류입니다",
+      "ERROR": "일반 오류입니다",
+      "GETTING_DATA": "데이터를 가져오는 중입니다",
+      "NULL": "Null 오류입니다"
+    }
+    
+    return errorTranslations[error] || error
+  }
+
+  /**
+   * 모든 시트 정리
+   */
+  private clearAllSheets(): void {
+    const sheetNames = this.hf.getSheetNames()
+    for (const sheetName of sheetNames) {
+      try {
+        this.hf.removeSheet(this.hf.getSheetId(sheetName) as number)
+      } catch (error) {
+        // 시트 제거 실패 시 무시
+      }
+    }
+    this.sheetIdMap.clear()
+  }
+
+  /**
+   * 시트 ID 가져오기
+   */
+  private getSheetId(sheetName?: string): number | null {
+    if (!sheetName) {
+      const sheetNames = this.hf.getSheetNames()
+      return sheetNames.length > 0 ? this.hf.getSheetId(sheetNames[0]) as number : null
+    }
+    return this.hf.getSheetId(sheetName) as number || null
+  }
+
+  /**
+   * 빈 셀 찾기
+   */
+  private findEmptyCell(sheetId: number): { sheet: number; row: number; col: number } {
+    const dimensions = this.hf.getSheetDimensions(sheetId)
+    // 데이터가 있는 영역 밖의 안전한 위치 사용
+    return {
+      sheet: sheetId,
+      row: Math.max(dimensions.height + 10, 1000),
+      col: Math.max(dimensions.width + 10, 100)
+    }
+  }
+
+  /**
+   * 오류 결과인지 확인
+   */
+  private isErrorResult(result: any): boolean {
+    return result && typeof result === 'object' && 'type' in result && 'value' in result
+  }
+
+  /**
+   * 오류 결과 파싱
+   */
+  private parseErrorResult(result: any): { type: string; message: string } {
+    const type = result.type || 'UNKNOWN_ERROR'
+    const message = this.translateError(type)
+    return { type, message }
+  }
+
+  /**
+   * 수식 의존성 가져오기 (개선된 버전)
+   */
+  private getFormulaDependencies(address: { sheet: number; row: number; col: number }): FormulaDependency {
+    try {
+      // 선행 셀 (이 셀이 참조하는 셀들)
+      const precedents = this.hf.getCellPrecedents(address)
+      const precedentsList = precedents.map((addr: any) => 
+        `${this.hf.getSheetName(addr.sheet)}!${this.cellAddressToA1(addr.row + 1, addr.col + 1)}`
+      )
+      
+      // 종속 셀 (이 셀을 참조하는 셀들)
+      const dependents = this.hf.getCellDependents(address)
+      const dependentsList = dependents.map((addr: any) => 
+        `${this.hf.getSheetName(addr.sheet)}!${this.cellAddressToA1(addr.row + 1, addr.col + 1)}`
+      )
+      
+      // 의존성 레벨 계산
+      const level = Math.max(precedentsList.length, dependentsList.length)
+      
+      return {
+        precedents: precedentsList,
+        dependents: dependentsList,
+        level
+      }
+    } catch (error) {
+      return { precedents: [], dependents: [], level: 0 }
+    }
+  }
+
+  /**
+   * 휘발성 함수 찾기
+   */
+  private findVolatileFunctions(formula: string): string[] {
+    const volatileFunctions = [
+      'NOW', 'TODAY', 'RAND', 'RANDBETWEEN', 'INDIRECT', 'OFFSET',
+      'CELL', 'INFO', 'AREAS', 'ROWS', 'COLUMNS'
+    ]
+    
+    const found: string[] = []
+    const upperFormula = formula.toUpperCase()
+    
+    for (const func of volatileFunctions) {
+      if (upperFormula.includes(func)) {
+        found.push(func)
+      }
+    }
+    
+    return found
+  }
+
+  /**
+   * 수식 복잡도 계산
+   */
+  private calculateComplexity(formula: string, dependencies: FormulaDependency): 'simple' | 'medium' | 'complex' {
+    let score = 0
+    
+    // 길이 기반 점수
+    score += Math.floor(formula.length / 50)
+    
+    // 함수 개수
+    const functionCount = (formula.match(/[A-Z]+\(/g) || []).length
+    score += functionCount
+    
+    // 의존성 개수
+    score += dependencies.precedents.length
+    
+    // 중첩 레벨 (괄호 개수로 추정)
+    const nestingLevel = (formula.match(/\(/g) || []).length
+    score += nestingLevel
+    
+    if (score <= 3) return 'simple'
+    if (score <= 8) return 'medium'
+    return 'complex'
+  }
+
+  /**
+   * 지원되는 함수 개수 가져오기
+   */
+  getSupportedFunctionsCount(): number {
+    try {
+      return this.hf.getRegisteredFunctionNames().length
+    } catch (error) {
+      return 394 // 기본값
+    }
+  }
+
+  /**
+   * 지원되는 함수 목록 가져오기
+   */
+  getSupportedFunctions(): string[] {
+    try {
+      return this.hf.getRegisteredFunctionNames()
+    } catch (error) {
+      return []
+    }
+  }
+
+  /**
+   * 엔진 상태 확인
+   */
+  getEngineStats(): {
+    isInitialized: boolean
+    sheetsCount: number
+    supportedFunctions: number
+    memoryUsage?: number
+  } {
+    return {
+      isInitialized: this.isInitialized,
+      sheetsCount: this.hf.countSheets(),
+      supportedFunctions: this.getSupportedFunctionsCount(),
+      memoryUsage: process.memoryUsage?.().heapUsed
+    }
+  }
+
+  /**
+   * HyperFormula 인스턴스 정리
+   */
+  destroy(): void {
+    if (this.isInitialized) {
+      try {
+        this.hf.destroy()
+        this.sheetIdMap.clear()
+        this.isInitialized = false
+      } catch (error) {
+        console.warn('Error during FormulaEngine cleanup:', error)
+      }
+    }
+  }
+}

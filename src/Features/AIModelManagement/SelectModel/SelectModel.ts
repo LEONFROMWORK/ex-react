@@ -19,7 +19,7 @@ export interface SelectModelResponse {
   displayName: string
   maxTokens: number
   temperature: number
-  costPerToken: number
+  costPerCredit: number
   endpoint?: string | null
 }
 
@@ -40,7 +40,7 @@ export class ModelSelector {
     models: AIModelConfig[],
     criteria: SelectModelRequest,
     routingConfig: RoutingConfig
-  ): Result<AIModelConfig> {
+  ): Promise<Result<AIModelConfig>> {
     if (models.length === 0) {
       return Result.failure(AIModelErrors.NoModelsConfigured)
     }
@@ -77,7 +77,7 @@ export class ModelSelector {
 
       // Check cost limit
       const costThreshold = routingConfig.costThreshold || criteria.costLimit
-      if (costThreshold && model.costPerToken > costThreshold) {
+      if (costThreshold && (model as any).costPerCredit && (model as any).costPerCredit > costThreshold) {
         return false
       }
 
@@ -97,7 +97,7 @@ export class ModelSelector {
     // Apply sorting based on configuration
     if (routingConfig.enableCostOptimization) {
       // Sort by cost (ascending)
-      eligibleModels.sort((a, b) => a.costPerToken - b.costPerToken)
+      eligibleModels.sort((a, b) => ((a as any).costPerCredit || 0) - ((b as any).costPerCredit || 0))
     } else if (routingConfig.providerPriority) {
       // Sort by provider priority
       const providerOrder = routingConfig.providerPriority
@@ -114,7 +114,7 @@ export class ModelSelector {
         if (a.priority !== b.priority) {
           return b.priority - a.priority
         }
-        return a.costPerToken - b.costPerToken
+        return ((a as any).costPerCredit || 0) - ((b as any).costPerCredit || 0)
       })
     }
 
@@ -200,7 +200,7 @@ export class SelectModelHandler {
         }
       })
 
-      const routingConfig: RoutingConfig = routingPolicy?.rules || {}
+      const routingConfig: RoutingConfig = (routingPolicy?.rules as RoutingConfig) || {}
 
       // Select best model
       const selectionResult = await this.modelSelector.selectBestModel(
@@ -222,7 +222,7 @@ export class SelectModelHandler {
         displayName: selectedModel.displayName,
         maxTokens: selectedModel.maxTokens,
         temperature: selectedModel.temperature,
-        costPerToken: selectedModel.costPerToken,
+        costPerCredit: (selectedModel as any).costPerCredit || (selectedModel as any).costPerToken || 0,
         endpoint: selectedModel.endpoint
       })
     } catch (error) {

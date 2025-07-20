@@ -222,7 +222,7 @@ export default function TestPage() {
                           </span>
                         )}
                         {result.duration && result.duration > 1000 && (
-                          <Badge variant="warning">느림</Badge>
+                          <Badge variant="destructive">느림</Badge>
                         )}
                       </div>
                     </div>
@@ -368,7 +368,7 @@ export default function TestPage() {
           <Alert>
             <Zap className="h-4 w-4" />
             <AlertDescription>
-              모든 기능을 테스트하려면 Redis, PostgreSQL, Python (oletools)가 
+              모든 기능을 테스트하려면 Redis, PostgreSQL이 
               설치되어 있어야 합니다. start-dev.sh 스크립트를 실행하여 
               환경을 설정하세요.
             </AlertDescription>

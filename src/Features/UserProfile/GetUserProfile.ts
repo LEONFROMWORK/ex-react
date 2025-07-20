@@ -17,8 +17,8 @@ export class GetUserProfile {
     emailVerified: z.date().nullable(),
     subscription: z.object({
       plan: z.enum(["FREE", "BASIC", "PREMIUM", "ENTERPRISE"]),
-      tokensRemaining: z.number(),
-      monthlyTokens: z.number(),
+      creditsRemaining: z.number(),
+      monthlyCredits: z.number(),
       validUntil: z.date().nullable(),
     }).nullable(),
     referral: z.object({
@@ -102,17 +102,17 @@ export class GetUserProfileHandler {
         }
       })
 
-      return Result.success({
+      const response: GetUserProfileResponse = {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: user.role as "USER" | "ADMIN" | "SUPER_ADMIN",
         createdAt: user.createdAt,
         emailVerified: user.emailVerified,
         subscription: user.subscription ? {
           plan: user.subscription.plan,
-          tokensRemaining: user.subscription.tokensRemaining,
-          monthlyTokens: user.subscription.monthlyTokens,
+          creditsRemaining: user.subscription.creditsRemaining,
+          monthlyCredits: user.subscription.monthlyCredits,
           validUntil: user.subscription.validUntil,
         } : null,
         referral: user.referral ? {
@@ -125,7 +125,9 @@ export class GetUserProfileHandler {
           errorsDetected,
           errorsCorrected,
         },
-      })
+      }
+      
+      return Result.success(response)
     } catch (error) {
       console.error("Get profile error:", error)
       return Result.failure({

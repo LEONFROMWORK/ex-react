@@ -6,6 +6,12 @@ import { config } from "@/config"
 // Service imports - conditionally loaded based on environment
 import { LocalFileStorage } from "@/Infrastructure/ExternalServices/LocalFileStorage"
 
+// Repository imports
+import { PrismaFileRepository } from "@/Infrastructure/Repositories/PrismaFileRepository"
+import { PrismaAnalysisRepository } from "@/Infrastructure/Repositories/PrismaAnalysisRepository"
+import { IFileRepository } from "@/Common/Repositories/IFileRepository"
+import { IAnalysisRepository } from "@/Common/Repositories/IAnalysisRepository"
+
 // AI Model Management handlers
 import { ConfigureModelHandler } from "@/Features/AIModelManagement/ConfigureModel/ConfigureModel"
 import { SelectModelHandler } from "@/Features/AIModelManagement/SelectModel/SelectModel"
@@ -13,18 +19,19 @@ import { ValidateModelHandler } from "@/Features/AIModelManagement/ValidateModel
 import { GetActiveModelsHandler } from "@/Features/AIModelManagement/GetActiveModels/GetActiveModels"
 import { LogUsageHandler, GetUsageStatsHandler } from "@/Features/AIModelManagement/MonitorUsage/MonitorUsage"
 
-// AI Chat handlers
-import { SendMessageHandler } from "@/Features/AIChat/SendMessage/SendMessage"
-import { SendChatMessageHandler } from "@/Features/AIChat/SendChatMessage"
-import { ClassifyIntentHandler } from "@/Features/AIChat/ClassifyIntent/ClassifyIntent"
-import { GenerateResponseHandler } from "@/Features/AIChat/GenerateResponse/GenerateResponse"
-import { ManageConversationHandler } from "@/Features/AIChat/ManageConversation/ManageConversation"
+// AI Chat handlers - temporarily disabled
+// import { SendMessageHandler } from "@/Features/AIChat/SendMessage/SendMessage"
+// import { SendChatMessageHandler } from "@/Features/AIChat/SendChatMessage"
+// import { ClassifyIntentHandler } from "@/Features/AIChat/ClassifyIntent/ClassifyIntent"
+// import { GenerateResponseHandler } from "@/Features/AIChat/GenerateResponse/GenerateResponse"
+// import { ManageConversationHandler } from "@/Features/AIChat/ManageConversation/ManageConversation"
 
 // Service interfaces
 export interface IFileStorage {
   save(file: Buffer, key: string): Promise<string>
   get(key: string): Promise<Buffer>
   delete(key: string): Promise<void>
+  uploadAsync?(file: File, fileName: string): Promise<any>
 }
 
 export interface ICacheService {
@@ -58,7 +65,7 @@ export class Container {
   
   private registerServicesSync() {
     // Core services
-    this.register("prisma", prisma)
+    this.register("prisma", () => prisma)
     this.register("excelAnalyzer", () => new EnhancedExcelAnalyzer())
     
     // AI services - environment aware
@@ -87,15 +94,12 @@ export class Container {
       })
     }
     
-    // File storage - environment aware
-    if (config.storage.provider === 's3') {
-      this.register("fileStorage", () => {
-        const S3FileStorage = require("@/Infrastructure/ExternalServices/S3FileStorage").S3FileStorage
-        return new S3FileStorage()
-      })
-    } else {
-      this.register("fileStorage", () => new LocalFileStorage())
-    }
+    // File storage - use local storage only
+    this.register("fileStorage", () => new LocalFileStorage())
+    
+    // Repository services
+    this.register("fileRepository", () => new PrismaFileRepository(prisma))
+    this.register("analysisRepository", () => new PrismaAnalysisRepository(prisma))
     
     // Notification service - environment aware
     if (config.email.provider === 'mock') {
@@ -120,19 +124,19 @@ export class Container {
     this.register("logUsageHandler", () => new LogUsageHandler())
     this.register("getUsageStatsHandler", () => new GetUsageStatsHandler())
     
-    // AI Chat handlers
-    this.register("sendMessageHandler", () => new SendMessageHandler(
-      undefined,
-      this.get("classifyIntentHandler"),
-      this.get("selectModelHandler"),
-      this.get("generateResponseHandler"),
-      this.get("manageConversationHandler"),
-      this.get("logUsageHandler")
-    ))
-    this.register("sendChatMessageHandler", () => new SendChatMessageHandler())
-    this.register("classifyIntentHandler", () => new ClassifyIntentHandler())
-    this.register("generateResponseHandler", () => new GenerateResponseHandler())
-    this.register("manageConversationHandler", () => new ManageConversationHandler())
+    // AI Chat handlers - temporarily disabled
+    // this.register("sendMessageHandler", () => new SendMessageHandler(
+    //   undefined,
+    //   this.get("classifyIntentHandler"),
+    //   this.get("selectModelHandler"),
+    //   this.get("generateResponseHandler"),
+    //   this.get("manageConversationHandler"),
+    //   this.get("logUsageHandler")
+    // ))
+    // this.register("sendChatMessageHandler", () => new SendChatMessageHandler())
+    // this.register("classifyIntentHandler", () => new ClassifyIntentHandler())
+    // this.register("generateResponseHandler", () => new GenerateResponseHandler())
+    // this.register("manageConversationHandler", () => new ManageConversationHandler())
   }
 
   register<T>(key: string, factory: () => T): void {
@@ -172,6 +176,15 @@ export class Container {
     return this.get<INotificationService>("notification")
   }
   
+  // Repository services
+  getFileRepository() {
+    return this.get<IFileRepository>("fileRepository")
+  }
+  
+  getAnalysisRepository() {
+    return this.get<IAnalysisRepository>("analysisRepository")
+  }
+  
   // AI Model Management handlers
   getConfigureModelHandler() {
     return this.get<ConfigureModelHandler>("configureModelHandler")
@@ -197,26 +210,29 @@ export class Container {
     return this.get<GetUsageStatsHandler>("getUsageStatsHandler")
   }
   
-  // AI Chat handlers
+  // AI Chat handlers - temporarily disabled
   getSendMessageHandler() {
-    return this.get<SendMessageHandler>("sendMessageHandler")
+    // Temporary placeholder until proper implementation
+    return {
+      handle: async () => ({ success: false, error: 'Chat feature temporarily disabled' })
+    }
   }
   
-  getSendChatMessageHandler() {
-    return this.get<SendChatMessageHandler>("sendChatMessageHandler")
-  }
+  // getSendChatMessageHandler() {
+  //   return this.get<SendChatMessageHandler>("sendChatMessageHandler")
+  // }
   
-  getClassifyIntentHandler() {
-    return this.get<ClassifyIntentHandler>("classifyIntentHandler")
-  }
+  // getClassifyIntentHandler() {
+  //   return this.get<ClassifyIntentHandler>("classifyIntentHandler")
+  // }
   
-  getGenerateResponseHandler() {
-    return this.get<GenerateResponseHandler>("generateResponseHandler")
-  }
+  // getGenerateResponseHandler() {
+  //   return this.get<GenerateResponseHandler>("generateResponseHandler")
+  // }
   
-  getManageConversationHandler() {
-    return this.get<ManageConversationHandler>("manageConversationHandler")
-  }
+  // getManageConversationHandler() {
+  //   return this.get<ManageConversationHandler>("manageConversationHandler")
+  // }
 }
 
 // Notification implementations

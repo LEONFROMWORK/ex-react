@@ -102,7 +102,7 @@ export class ProcessReferralHandler {
         await tx.subscription.update({
           where: { userId: request.refereeUserId },
           data: {
-            tokensRemaining: {
+            creditsRemaining: {
               increment: REFERRAL_REWARDS.REFEREE_TOKENS,
             },
           },
@@ -114,7 +114,7 @@ export class ProcessReferralHandler {
             userId: request.refereeUserId,
             type: "BONUS",
             amount: 0,
-            tokens: REFERRAL_REWARDS.REFEREE_TOKENS,
+            credits: REFERRAL_REWARDS.REFEREE_TOKENS,
             description: "회원가입 추천 보너스",
             status: "COMPLETED",
           },
@@ -124,7 +124,7 @@ export class ProcessReferralHandler {
         await tx.subscription.update({
           where: { userId: referral.userId },
           data: {
-            tokensRemaining: {
+            creditsRemaining: {
               increment: REFERRAL_REWARDS.REFERRER_TOKENS,
             },
           },
@@ -136,7 +136,7 @@ export class ProcessReferralHandler {
             userId: referral.userId,
             type: "BONUS",
             amount: REFERRAL_REWARDS.REFERRER_CASH,
-            tokens: REFERRAL_REWARDS.REFERRER_TOKENS,
+            credits: REFERRAL_REWARDS.REFERRER_TOKENS,
             description: `${request.refereeEmail} 추천 보상`,
             status: "COMPLETED",
           },

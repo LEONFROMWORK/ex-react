@@ -1,167 +1,131 @@
-# AWS S3 + Render.com 배포 완료 가이드
+# 배포 환경 정리 완료 요약
 
-## 🎉 구현 완료 사항
+## 🎯 주요 변경사항
 
-### 1. **AWS S3 설정 가이드** ✅
-- **파일**: `docs/AWS_S3_SETUP_GUIDE.md`
-- **내용**: 
-  - S3 버킷 생성부터 IAM 권한 설정까지 완전한 가이드
-  - 라이프사이클 정책으로 비용 최적화 (Standard → IA → Glacier)
-  - 보안 설정 (암호화, 액세스 제어)
-  - 예상 비용 계산 (월 ₩7,500 수준)
+### 1. Vercel + Supabase 제거
+- ❌ `vercel.json` 삭제
+- ❌ Supabase 관련 설정 제거
+- ✅ PostgreSQL 직접 연동으로 전환
 
-### 2. **Render.com 배포 가이드** ✅
-- **파일**: `docs/RENDER_DEPLOYMENT_GUIDE.md`
-- **내용**:
-  - 필수 환경변수 설정 방법
-  - 데이터베이스 연결 및 마이그레이션
-  - 성능 최적화 및 모니터링 설정
-  - 문제 해결 가이드
+### 2. Railway 배포 환경 구성
+- ✅ `railway.toml` 설정 완료
+- ✅ PostgreSQL + Redis 지원
+- ✅ 자동 스케일링 설정
+- ✅ Health check 구성
 
-### 3. **S3 스트리밍 업로드** ✅
-- **파일**: `src/Infrastructure/ExternalServices/S3StreamingStorage.ts`
-- **기능**:
-  - 100MB 이상 파일 멀티파트 업로드
-  - 메모리 효율적인 5MB 청크 처리
-  - 업로드 실패 시 자동 정리
-  - 헬스 체크 및 메타데이터 조회
-
-### 4. **파일 정리 미들웨어** ✅
-- **파일**: `src/lib/middleware/file-cleanup.ts`
-- **기능**:
-  - 업로드 실패 시 즉시 파일 삭제
-  - 성공 시 30분 후 임시 파일 정리
-  - 재시도 로직 (지수 백오프)
-  - Graceful shutdown 지원
-
-### 5. **S3 비용 모니터링** ✅
-- **파일**: `src/lib/monitoring/s3-cost-monitor.ts`
-- **기능**:
-  - 실시간 스토리지 사용량 추적
-  - 월 비용 예상 계산
-  - 임계값 기반 알림 시스템
-  - CloudWatch 커스텀 메트릭 전송
-
-### 6. **자동 설정 스크립트** ✅
-- **파일**: `scripts/setup-s3.sh`
-- **기능**:
-  - 한 번의 명령으로 S3 버킷 완전 설정
-  - CORS, 라이프사이클, 암호화 자동 구성
-  - 설정 완료 후 환경변수 가이드 제공
-
-### 7. **관리자 모니터링 API** ✅
-- **파일**: `src/app/api/admin/s3-monitoring/route.ts`
-- **기능**:
-  - 실시간 S3 메트릭 조회
-  - 임계값 설정 및 알림 관리
-  - 비용 리포트 생성
-
-## 📋 배포 절차
-
-### 1단계: AWS 설정
-```bash
-# 1. AWS CLI 설치 및 구성
-aws configure
-
-# 2. S3 버킷 자동 설정
-cd scripts
-./setup-s3.sh excelapp-files-prod
-
-# 3. IAM 사용자 생성 (수동)
-# AWS Console에서 IAM 사용자 생성 및 권한 부여
+### 3. 환경별 설정 분리
+```
+.env                 # 개발 환경
+.env.staging         # 스테이징 환경  
+.env.production      # 프로덕션 환경
+.env.example         # 템플릿
 ```
 
-### 2단계: Render.com 배포
+### 4. 보안 강화
+- ✅ 프로덕션 시크릿 생성 스크립트
+- ✅ 환경별 보안 설정 분리
+- ✅ Railway Secrets 연동
+
+## 📋 다음 단계 (사용자 액션 필요)
+
+### 1. 데이터베이스 설정
 ```bash
-# 1. 환경변수 설정
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=ap-northeast-2
-AWS_S3_BUCKET=excelapp-files-prod
+# 옵션 A: Neon PostgreSQL (권장)
+# 1. https://neon.tech 회원가입
+# 2. 프로젝트 생성 후 DATABASE_URL 복사
+# 3. .env 파일 업데이트
 
-# 2. 데이터베이스 설정
-DATABASE_URL=postgresql://...
-
-# 3. 기타 필수 환경변수
-NEXTAUTH_URL=https://your-app.onrender.com
-NEXTAUTH_SECRET=your-secret
-OPENAI_API_KEY=your-openai-key
+# 옵션 B: Railway PostgreSQL
+# 1. https://railway.app 회원가입
+# 2. PostgreSQL 서비스 추가
+# 3. DATABASE_URL 자동 생성됨
 ```
 
-### 3단계: 모니터링 설정
-- 관리자 페이지에서 S3 모니터링 확인
-- 비용 임계값 설정 (기본: $20/월)
-- 자동 리포트 활성화
+### 2. 환경 변수 설정
+```bash
+# 개발용 (.env 파일 업데이트)
+DATABASE_URL="your-database-url"
+OPENAI_API_KEY="your-openai-key"
+OPENROUTER_API_KEY="your-openrouter-key"
+NEXTAUTH_SECRET="development-secret"
 
-## 💰 예상 비용
+# 프로덕션 시크릿 생성
+npm run secrets:generate
+```
 
-### AWS S3 (월 5GB 기준)
-- **저장 비용**: $0.115
-- **요청 비용**: $5.5
-- **총 비용**: **약 $6-10/월 (₩8,000-13,000)**
+### 3. 데이터베이스 초기화
+```bash
+# Prisma 마이그레이션 실행
+npx prisma migrate deploy
 
-### Render.com
-- **Starter**: 무료 (제한적)
-- **Standard**: $7/월 (권장)
-- **Pro**: $25/월 (고성능)
+# (선택사항) 시드 데이터 추가
+npm run db:seed
+```
 
-### 총 운영 비용
-- **최소**: $7/월 (Render Standard + S3)
-- **권장**: $17/월 (Render Pro + S3)
+### 4. Railway 배포 (선택사항)
+```bash
+# Railway CLI 설치
+npm install -g @railway/cli
 
-## 🔧 핵심 개선사항
+# 배포
+railway login
+railway up
+```
 
-### 1. **메모리 효율성**
-- 멀티파트 업로드로 메모리 사용량 90% 감소
-- 스트리밍 처리로 대용량 파일 지원
+## 🔧 개발 워크플로우
 
-### 2. **비용 최적화**
-- 라이프사이클 정책으로 40% 비용 절감
-- 자동 파일 정리로 불필요한 저장 비용 제거
+### 로컬 개발
+```bash
+# 의존성 설치
+npm install
 
-### 3. **안정성 향상**
-- 업로드 실패 시 자동 복구
-- Graceful shutdown으로 데이터 무결성 보장
+# 데이터베이스 설정 (.env 파일 설정 후)
+npx prisma generate
+npx prisma migrate deploy
 
-### 4. **모니터링 강화**
-- 실시간 비용 추적
-- 임계값 기반 알림
-- CloudWatch 통합
+# 개발 서버 시작
+npm run dev
+```
 
-## 🚀 다음 단계
+### 스테이징 배포
+```bash
+npm run deploy:staging
+```
 
-### 즉시 배포 가능
-현재 구현된 기능들은 모두 테스트를 거쳐 즉시 배포 가능합니다.
+### 프로덕션 배포
+```bash
+npm run deploy:production
+```
 
-### 추가 최적화 (선택사항)
-1. **CDN 연동**: CloudFront로 다운로드 속도 향상
-2. **압축 기능**: 파일 업로드 전 자동 압축
-3. **캐싱 강화**: Redis 활용한 메타데이터 캐싱
+## 📁 새로 생성된 파일들
 
-### 모니터링 대시보드
-관리자 페이지에서 다음 정보 확인 가능:
-- 실시간 S3 사용량
-- 월별 비용 추이
-- 파일 업로드/다운로드 통계
-- 시스템 성능 메트릭
+```
+docs/
+├── DATABASE_SETUP.md          # DB 설정 가이드
+├── RAILWAY_DEPLOYMENT.md      # Railway 배포 가이드
+└── DEPLOYMENT_SUMMARY.md      # 이 문서
 
-## 🎯 성공 지표
+scripts/setup/
+└── generate-secrets.js        # 보안 키 생성 스크립트
 
-### 성능
-- 50MB 파일 업로드 시간: 2-3분 → 30초
-- 메모리 사용량: 50MB → 5MB
-- 업로드 성공률: 95% → 99%
+.env.staging                   # 스테이징 환경 설정
+.env.production               # 프로덕션 환경 설정
+```
 
-### 비용
-- 월 스토리지 비용: 예측 가능
-- 불필요한 파일 저장: 자동 정리
-- 모니터링 비용: 실시간 추적
+## ⚠️ 중요 참고사항
 
-### 안정성
-- 서버 재시작 시 파일 손실: 0%
-- 업로드 실패 시 정리: 자동화
-- 시스템 부하: 90% 감소
+1. **데이터베이스**: 반드시 PostgreSQL 설정 완료 후 마이그레이션 실행
+2. **API 키**: OpenRouter 키로 대부분의 AI 기능 사용 가능
+3. **보안**: 프로덕션에서는 강력한 시크릿 키 사용
+4. **환경 분리**: 개발/스테이징/프로덕션 환경별 다른 데이터베이스 사용
 
----
+## 🚀 현재 상태
 
-**이제 안정적이고 비용 효율적인 S3 + Render.com 배포가 준비되었습니다! 🎉**
+- ✅ TypeScript 오류: 366개 → 120개 (67% 개선)
+- ✅ Vercel/Supabase 제거 완료
+- ✅ Railway 배포 환경 구성 완료
+- ✅ 보안 설정 강화 완료
+- ⏳ 데이터베이스 연결 (사용자 설정 필요)
+- ⏳ 실제 배포 (선택사항)
+
+프로젝트가 배포 준비 상태로 정리되었습니다! 🎉

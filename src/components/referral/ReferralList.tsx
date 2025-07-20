@@ -29,7 +29,7 @@ const STATUS_CONFIG = {
   },
   COMPLETED: {
     label: "완료",
-    variant: "success" as const,
+    variant: "default" as const,
     icon: CheckCircle2,
   },
   EXPIRED: {

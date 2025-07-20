@@ -1,5 +1,5 @@
 import { Result } from '@/Common/Result'
-import { PythonOleToolsAdapter, VBAExtractionResult } from './PythonOleToolsAdapter'
+import { JSVBAExtractor, VBAExtractionResult } from './JSVBAExtractor'
 import { promises as fs } from 'fs'
 import { getExcelAnalysisCacheService } from '@/Services/Cache/ExcelAnalysisCacheService'
 
@@ -103,11 +103,11 @@ export class ExtractVBACodeValidator {
 
 // Handler
 export class ExtractVBACodeHandler {
-  private adapter: PythonOleToolsAdapter
+  private extractor: JSVBAExtractor
   private cacheService = getExcelAnalysisCacheService()
 
   constructor() {
-    this.adapter = new PythonOleToolsAdapter()
+    this.extractor = new JSVBAExtractor()
   }
 
   async handle(request: ExtractVBACodeRequest): Promise<Result<ExtractVBACodeResponse>> {
@@ -141,7 +141,7 @@ export class ExtractVBACodeHandler {
             moduleType: m.type,
             code: m.code,
           }))
-          const securityScan = await this.adapter.scanVBASecurity(modules)
+          const securityScan = await this.extractor.scanVBASecurity(modules)
           cachedResult.value.securityScan = securityScan
         }
         
@@ -149,7 +149,7 @@ export class ExtractVBACodeHandler {
       }
 
       // 3. VBA 코드 추출
-      const extractionResult = await this.adapter.extractVBACode(fileBuffer)
+      const extractionResult = await this.extractor.extractVBACode(fileBuffer)
       
       if (!extractionResult.isSuccess) {
         return Result.failure(extractionResult.error)
@@ -168,12 +168,17 @@ export class ExtractVBACodeHandler {
           code: module.code,
           lineCount: module.code.split('\n').length,
         })),
-        metadata: extraction.metadata,
+        metadata: {
+          hasVBA: extraction.modules.length > 0,
+          totalModules: extraction.metadata.totalModules,
+          totalLines: extraction.metadata.totalLines,
+          extractionTime: extraction.metadata.extractionTime
+        },
       }
 
       // 4. 보안 스캔 (옵션)
       if (request.includeSecurityScan && extraction.modules.length > 0) {
-        const securityScan = await this.adapter.scanVBASecurity(extraction.modules)
+        const securityScan = await this.extractor.scanVBASecurity(extraction.modules)
         response.securityScan = securityScan
       }
 
@@ -193,10 +198,12 @@ export class ExtractVBACodeHandler {
 }
 
 // Convenience export
-export default {
+const ExtractVBACodeModule = {
   Request: {} as ExtractVBACodeRequest,
   Response: {} as ExtractVBACodeResponse,
   Validator: ExtractVBACodeValidator,
   Handler: ExtractVBACodeHandler,
   Errors: ExtractVBACodeErrors,
 }
+
+export default ExtractVBACodeModule

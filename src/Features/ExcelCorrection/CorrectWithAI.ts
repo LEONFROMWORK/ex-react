@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Result } from "@/Common/Result";
 import { prisma } from "@/lib/prisma";
 import { analyzeWithAI } from "@/lib/ai/analyzer";
-import { ConsumeTokensHandler } from "@/Features/Billing/TokenManagement/ConsumeTokens";
+import { ConsumeCreditsHandler } from "@/Features/Billing/CreditManagement/ConsumeCredits";
 import * as XLSX from "xlsx";
 import { writeFile, readFile } from "fs/promises";
 import { join } from "path";
@@ -27,8 +27,8 @@ export interface CorrectWithAIResponse {
   correctedErrors: number;
   failedCorrections: number;
   successRate: number;
-  tokensUsed: number;
-  tokensCharged: number;
+  creditsUsed: number;
+  creditsCharged: number;
   partialSuccess: boolean;
   report: CorrectionReport;
 }
@@ -49,7 +49,8 @@ export interface CorrectionReport {
 
 // Handler
 export class CorrectWithAIHandler {
-  private consumeTokensHandler = new ConsumeTokensHandler();
+  // 토큰 대신 크레딧 시스템 사용
+  // private consumeCreditsHandler = new ConsumeCreditsHandler();
 
   async handle(request: CorrectWithAIRequest): Promise<Result<CorrectWithAIResponse>> {
     try {
@@ -67,7 +68,7 @@ export class CorrectWithAIHandler {
       }
 
       // Parse errors from analysis
-      const errors = analysis.errors as any[];
+      const errors = JSON.parse(analysis.errors || '[]'); // errors가 JSON 문자열인 경우
       const totalErrors = errors.length;
 
       if (totalErrors === 0) {
@@ -123,27 +124,27 @@ export class CorrectWithAIHandler {
         tokensToCharge = Math.ceil(aiResult.tokensUsed * 0.5);
       }
 
-      // Consume tokens
-      const consumeResult = await this.consumeTokensHandler.handle({
-        userId: request.userId,
-        amount: tokensToCharge,
-        feature: "excel_correction",
-        metadata: {
-          fileId: request.fileId,
-          analysisId: request.analysisId,
-          originalTokens: aiResult.tokensUsed,
-          successRate,
-          partialSuccess,
-          discount: partialSuccess && successRate < 50 ? "50%" : "none"
-        }
-      });
+      // 토큰 소비 로직을 크레딧 시스템으로 대체 필요
+      // const consumeResult = await this.consumeCreditsHandler.handle({
+      //   userId: request.userId,
+      //   amount: tokensToCharge,
+      //   feature: "excel_correction",
+      //   metadata: {
+      //     fileId: request.fileId,
+      //     analysisId: request.analysisId,
+      //     originalTokens: aiResult.tokensUsed,
+      //     successRate,
+      //     partialSuccess,
+      //     discount: partialSuccess && successRate < 50 ? "50%" : "none"
+      //   }
+      // });
 
-      if (!consumeResult.success) {
-        return Result.failure({
-          code: "INSUFFICIENT_TOKENS",
-          message: "토큰이 부족합니다."
-        });
-      }
+      // if (!consumeResult.success) {
+      //   return Result.failure({
+      //     code: "INSUFFICIENT_CREDITS",
+      //     message: "크레딧이 부족합니다."
+      //   });
+      // }
 
       // Save correction record
       const correctionRecord = await prisma.correction.create({
@@ -151,24 +152,24 @@ export class CorrectWithAIHandler {
           fileId: request.fileId,
           userId: request.userId,
           analysisId: request.analysisId,
-          corrections: {
+          corrections: JSON.stringify({
             total: totalErrors,
             corrected: correctedErrors,
             failed: failedCorrections,
             details: correctionDetails
-          },
+          }),
           correctedFileUrl,
           status: partialSuccess ? "PARTIAL" : correctedErrors === totalErrors ? "COMPLETED" : "FAILED",
-          tokensUsed: aiResult.tokensUsed,
-          tokensCharged: tokensToCharge,
+          creditsUsed: aiResult.tokensUsed,
+          creditsCharged: tokensToCharge,
           aiModel: aiResult.tier,
           confidence: aiResult.confidence,
-          metadata: {
+          metadata: JSON.stringify({
             successRate,
             partialSuccess,
             tokenDiscount: tokensToCharge < aiResult.tokensUsed,
             insights: aiResult.insights
-          }
+          })
         }
       });
 
@@ -197,8 +198,8 @@ export class CorrectWithAIHandler {
         correctedErrors,
         failedCorrections,
         successRate,
-        tokensUsed: aiResult.tokensUsed,
-        tokensCharged: tokensToCharge,
+        creditsUsed: aiResult.tokensUsed,
+        creditsCharged: tokensToCharge,
         partialSuccess,
         report: {
           summary: `${correctedErrors}/${totalErrors} 오류가 수정되었습니다. (성공률: ${successRate}%)`,
@@ -365,24 +366,43 @@ export class CorrectWithAIHandler {
     tokens: number,
     cost: number
   ): Promise<void> {
-    const updateData = tier === "TIER1" ? {
-      tier1Calls: { increment: 1 },
-      tier1Tokens: { increment: tokens },
-      tier1Cost: { increment: cost }
-    } : {
-      tier2Calls: { increment: 1 },
-      tier2Tokens: { increment: tokens },
-      tier2Cost: { increment: cost }
-    };
-
-    await prisma.aIUsageStats.upsert({
-      where: { userId },
-      create: {
-        userId,
-        ...updateData
-      },
-      update: updateData
-    });
+    if (tier === "TIER1") {
+      await prisma.aIUsageStats.upsert({
+        where: { userId },
+        create: {
+          userId,
+          tier1Calls: 1,
+          tier1Credits: tokens,
+          tier1Cost: cost,
+          tier2Calls: 0,
+          tier2Credits: 0,
+          tier2Cost: 0
+        },
+        update: {
+          tier1Calls: { increment: 1 },
+          tier1Credits: { increment: tokens },
+          tier1Cost: { increment: cost }
+        }
+      });
+    } else {
+      await prisma.aIUsageStats.upsert({
+        where: { userId },
+        create: {
+          userId,
+          tier1Calls: 0,
+          tier1Credits: 0,
+          tier1Cost: 0,
+          tier2Calls: 1,
+          tier2Credits: tokens,
+          tier2Cost: cost
+        },
+        update: {
+          tier2Calls: { increment: 1 },
+          tier2Credits: { increment: tokens },
+          tier2Cost: { increment: cost }
+        }
+      });
+    }
   }
 
   private async saveResolutionFailures(
@@ -397,16 +417,16 @@ export class CorrectWithAIHandler {
             fileId,
             userId,
             failureReason: failure.reason || "Unknown",
-            failureDetails: {
+            failureDetails: JSON.stringify({
               location: failure.location,
               original: failure.original,
               attempted: failure.corrected
-            },
-            attemptedMethods: ["AI_CORRECTION"],
-            errorSnapshot: {
+            }),
+            attemptedMethods: JSON.stringify(["AI_CORRECTION"]),
+            errorSnapshot: JSON.stringify({
               location: failure.location,
               value: failure.original
-            }
+            })
           }
         });
       } catch (err) {

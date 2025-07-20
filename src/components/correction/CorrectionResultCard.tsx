@@ -21,8 +21,8 @@ interface CorrectionResult {
   correctedErrors: number
   failedCorrections: number
   successRate: number
-  tokensUsed: number
-  tokensCharged: number
+  creditsUsed: number
+  creditsCharged: number
   partialSuccess: boolean
   correctedFileUrl?: string
   report: {
@@ -39,8 +39,8 @@ interface CorrectionResultCardProps {
 }
 
 export function CorrectionResultCard({ result, onDownload }: CorrectionResultCardProps) {
-  const tokensSaved = result.tokensUsed - result.tokensCharged
-  const discountPercentage = tokensSaved > 0 ? Math.round((tokensSaved / result.tokensUsed) * 100) : 0
+  const creditsSaved = result.creditsUsed - result.creditsCharged
+  const discountPercentage = creditsSaved > 0 ? Math.round((creditsSaved / result.creditsUsed) * 100) : 0
 
   return (
     <Card className="w-full">
@@ -105,23 +105,23 @@ export function CorrectionResultCard({ result, onDownload }: CorrectionResultCar
         <div className="p-4 bg-gray-50 rounded-lg space-y-3">
           <h4 className="font-medium flex items-center gap-2">
             <Coins className="h-4 w-4" />
-            토큰 사용량
+            크레딧 사용량
           </h4>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>사용된 토큰</span>
-              <span>{result.tokensUsed.toLocaleString()}</span>
+              <span>사용된 크레딧</span>
+              <span>{result.creditsUsed.toLocaleString()}</span>
             </div>
-            {tokensSaved > 0 && (
+            {creditsSaved > 0 && (
               <>
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>할인된 토큰</span>
-                  <span>-{tokensSaved.toLocaleString()} ({discountPercentage}%)</span>
+                  <span>할인된 크레딧</span>
+                  <span>-{creditsSaved.toLocaleString()} ({discountPercentage}%)</span>
                 </div>
                 <div className="border-t pt-2">
                   <div className="flex justify-between font-medium">
-                    <span>실제 차감 토큰</span>
-                    <span>{result.tokensCharged.toLocaleString()}</span>
+                    <span>실제 차감 크레딧</span>
+                    <span>{result.creditsCharged.toLocaleString()}</span>
                   </div>
                 </div>
               </>
@@ -135,7 +135,7 @@ export function CorrectionResultCard({ result, onDownload }: CorrectionResultCar
             <TrendingDown className="h-4 w-4" />
             <AlertTitle>부분 성공 할인 적용</AlertTitle>
             <AlertDescription>
-              성공률이 50% 미만이므로 토큰의 50%만 차감되었습니다.
+              성공률이 50% 미만이므로 크레딧의 50%만 차감되었습니다.
               완전한 수정을 위해서는 수동 검토가 필요할 수 있습니다.
             </AlertDescription>
           </Alert>

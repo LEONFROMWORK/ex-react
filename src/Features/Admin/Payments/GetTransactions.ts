@@ -63,7 +63,7 @@ export class GetTransactionsHandler {
         ];
       }
       
-      if (request.status && request.status !== "") {
+      if (request.status) {
         where.status = request.status;
       }
       

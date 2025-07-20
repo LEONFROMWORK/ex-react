@@ -42,33 +42,33 @@ export async function POST(request: NextRequest) {
         displayName: 'OpenAI GPT-4',
         maxTokens: 2000,
         temperature: 0.7,
-        costPerToken: 0.00003,
+        costPerCredit: 0.00003,
       },
       gemini: {
         modelName: 'gemini-pro',
         displayName: 'Google Gemini Pro',
         maxTokens: 2048,
         temperature: 0.7,
-        costPerToken: 0.000001,
+        costPerCredit: 0.000001,
       },
       claude: {
         modelName: 'claude-3-opus-20240229',
         displayName: 'Anthropic Claude 3 Opus',
         maxTokens: 2000,
         temperature: 0.7,
-        costPerToken: 0.000015,
+        costPerCredit: 0.000015,
       },
       llama: {
         modelName: 'llama2-70b',
         displayName: 'LLAMA 2 70B',
         maxTokens: 2000,
         temperature: 0.7,
-        costPerToken: 0,
+        costPerCredit: 0,
       },
       openrouter: {
         maxTokens: 2000,
         temperature: 0.7,
-        costPerToken: 0.001,
+        costPerCredit: 0.001,
       }
     }
 
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       maxTokens: Math.min(context_length || defaults.maxTokens || 2000, 4000),
       temperature: defaults.temperature || 0.7,
       costPerToken: pricing ? parseFloat(pricing.prompt) : (defaults.costPerToken || 0.001),
+      costPerCredit: pricing ? parseFloat(pricing.prompt) : (defaults.costPerCredit || 0.001),
       taskTypes: body.taskTypes || [],
       priority: body.priority || 0,
       isDefault: false,

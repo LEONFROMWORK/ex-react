@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
           refereeName: referee?.name || "Unknown",
           refereeEmail: referee?.email || "Unknown",
           rewardType: reward.rewardType,
-          tokensAwarded: reward.tokensAwarded,
+          creditsAwarded: reward.creditsAwarded,
           cashAwarded: reward.cashAwarded,
           status: reward.status,
           triggerEvent: reward.triggerEvent,

@@ -16,7 +16,7 @@ export interface ModelInfo {
   displayName: string
   maxTokens: number
   temperature: number
-  costPerToken: number
+  costPerCredit: number
   taskTypes: string[]
   priority: number
   isDefault: boolean
@@ -70,7 +70,7 @@ export class GetActiveModelsHandler {
         displayName: model.displayName,
         maxTokens: model.maxTokens,
         temperature: model.temperature,
-        costPerToken: model.costPerToken,
+        costPerCredit: (model as any).costPerCredit || (model as any).costPerToken || 0,
         taskTypes: model.taskTypes,
         priority: model.priority,
         isDefault: model.isDefault,

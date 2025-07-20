@@ -96,7 +96,7 @@ export class GetReferralStatsHandler {
       })
 
       const totalTokensEarned = tokenTransactions.reduce(
-        (sum, t) => sum + (t.tokens || 0),
+        (sum, t) => sum + (t.credits || 0),
         0
       )
 

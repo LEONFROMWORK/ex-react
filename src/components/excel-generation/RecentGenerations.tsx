@@ -34,7 +34,7 @@ interface GeneratedFile {
   type: 'prompt' | 'template'
   source: string
   downloadUrl: string
-  tokensUsed?: number
+  creditsUsed?: number
 }
 
 export function RecentGenerations() {
@@ -57,7 +57,7 @@ export function RecentGenerations() {
           type: 'prompt',
           source: '2024년 월별 매출 데이터와 성장률을 보여주는...',
           downloadUrl: '#',
-          tokensUsed: 156,
+          creditsUsed: 156,
         },
         {
           id: '2',
@@ -76,7 +76,7 @@ export function RecentGenerations() {
           type: 'prompt',
           source: '10개 작업의 프로젝트 일정 관리 Excel을 만들어...',
           downloadUrl: '#',
-          tokensUsed: 203,
+          creditsUsed: 203,
         },
       ]
       setRecentFiles(mockData)
@@ -205,10 +205,10 @@ export function RecentGenerations() {
                         {formatDistanceToNow(file.generatedAt, { addSuffix: true, locale: ko })}
                       </span>
                       <span>{formatFileSize(file.fileSize)}</span>
-                      {file.tokensUsed && (
+                      {file.creditsUsed && (
                         <span className="flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
-                          {file.tokensUsed} 토큰
+                          {file.creditsUsed} 크레딧
                         </span>
                       )}
                     </div>

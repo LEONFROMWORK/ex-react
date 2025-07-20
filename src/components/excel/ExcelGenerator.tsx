@@ -150,10 +150,11 @@ export function ExcelGenerator() {
       </div>
       
       {/* 생성 방식 선택 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>생성 방식</CardTitle>
-          <CardDescription>
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-950/30 dark:to-pink-950/30">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
+        <CardHeader className="relative">
+          <CardTitle className="text-indigo-700 dark:text-indigo-300">생성 방식</CardTitle>
+          <CardDescription className="text-indigo-600/70 dark:text-indigo-300/70">
             Excel 파일을 생성할 방법을 선택하세요
           </CardDescription>
         </CardHeader>
@@ -183,10 +184,11 @@ export function ExcelGenerator() {
       
       {/* 템플릿 선택 */}
       {generationType === 'template' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>템플릿 선택</CardTitle>
-            <CardDescription>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5" />
+          <CardHeader className="relative">
+            <CardTitle className="text-emerald-700 dark:text-emerald-300">템플릿 선택</CardTitle>
+            <CardDescription className="text-emerald-600/70 dark:text-emerald-300/70">
               사용할 Excel 템플릿을 선택하세요
             </CardDescription>
           </CardHeader>
@@ -230,10 +232,11 @@ export function ExcelGenerator() {
       
       {/* AI 프롬프트 입력 */}
       {generationType === 'ai' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>AI 생성 설정</CardTitle>
-            <CardDescription>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-950/30 dark:via-purple-950/30 dark:to-fuchsia-950/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
+          <CardHeader className="relative">
+            <CardTitle className="text-violet-700 dark:text-violet-300">AI 생성 설정</CardTitle>
+            <CardDescription className="text-violet-600/70 dark:text-violet-300/70">
               원하는 Excel 파일의 구조와 내용을 설명해주세요
             </CardDescription>
           </CardHeader>
@@ -262,10 +265,11 @@ export function ExcelGenerator() {
       )}
       
       {/* 추가 옵션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>추가 옵션</CardTitle>
-          <CardDescription>
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-red-950/30">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-red-500/5" />
+        <CardHeader className="relative">
+          <CardTitle className="text-amber-700 dark:text-amber-300">추가 옵션</CardTitle>
+          <CardDescription className="text-amber-600/70 dark:text-amber-300/70">
             Excel 파일에 포함할 기능을 선택하세요
           </CardDescription>
         </CardHeader>

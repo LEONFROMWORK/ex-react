@@ -66,7 +66,7 @@ const errorTypeIcons = {
 
 const severityColors = {
   error: 'destructive',
-  warning: 'warning', 
+  warning: 'destructive', 
   info: 'secondary'
 } as const
 

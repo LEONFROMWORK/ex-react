@@ -1,4 +1,4 @@
-import { ExcelJS } from 'exceljs'
+import * as ExcelJS from 'exceljs'
 import { AIService } from './ai.service'
 
 interface VBACode {
@@ -59,7 +59,11 @@ export class VBAAnalysisService {
   private aiService: AIService
 
   constructor() {
-    this.aiService = new AIService()
+    this.aiService = new AIService({
+      provider: 'openai',
+      apiKey: process.env.OPENAI_API_KEY || '',
+      model: 'gpt-4'
+    })
   }
 
   /**
@@ -69,8 +73,8 @@ export class VBAAnalysisService {
     const vbaModules: VBACode[] = []
     
     // ExcelJS는 VBA 코드를 직접 지원하지 않으므로
-    // 실제 구현에서는 python-oletools 또는 다른 도구 사용 필요
-    // 여기서는 예시로만 처리
+    // JavaScript 기반 JSVBAExtractor 사용
+    // ExcelJS로 VBA 관련 패턴 감지
     
     return vbaModules
   }
@@ -325,7 +329,7 @@ export class VBAAnalysisService {
     `
     
     try {
-      const result = await this.aiService.analyzeWithAI(prompt, 'high')
+      const result = await this.aiService.generateCompletion(prompt)
       // AI 결과 파싱 및 변환
       return { errors: [] }
     } catch (error) {
@@ -466,8 +470,8 @@ export class VBAAnalysisService {
     `
     
     try {
-      const result = await this.aiService.analyzeWithAI(prompt, 'high')
-      return result
+      const result = await this.aiService.generateCompletion(prompt)
+      return result.content
     } catch (error) {
       console.error('AI code fix failed:', error)
       return code

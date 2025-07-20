@@ -9,7 +9,7 @@ import { CheckAnalysisStatusHandler } from "@/Features/ExcelAnalysis/CheckAnalys
 import { GenerateErrorReportHandler } from "@/Features/ExcelAnalysis/GenerateReport/GenerateErrorReport"
 
 // Excel Correction
-import { ApplyCorrectionsHandler } from "@/Features/ExcelCorrection/ApplyCorrections"
+import { ApplyCorrectionHandler } from "@/Features/ExcelCorrection/ApplyCorrections"
 
 // Excel Download
 import { DownloadCorrectedFileHandler } from "@/Features/ExcelDownload/DownloadCorrectedFile"
@@ -18,8 +18,8 @@ import { DownloadCorrectedFileHandler } from "@/Features/ExcelDownload/DownloadC
 import { GetUserProfileHandler } from "@/Features/UserProfile/GetUserProfile"
 import { UpdateUserProfileHandler } from "@/Features/UserProfile/UpdateUserProfile"
 
-// AI Chat
-import { SendChatMessageHandler } from "@/Features/AIChat/SendChatMessage"
+// AI Chat (비활성화됨)
+// import { SendChatMessageHandler } from "@/Features/AIChat/SendChatMessage"
 
 // Authentication
 import { LoginHandler } from "@/Features/Authentication/Login"
@@ -32,6 +32,7 @@ export class HandlerFactory {
   // Excel Upload
   static createUploadExcelHandler(): UploadExcelHandler {
     return new UploadExcelHandler(
+      container.getFileRepository(),
       container.getFileStorage()
     )
   }
@@ -39,7 +40,8 @@ export class HandlerFactory {
   // Excel Analysis
   static createAnalyzeErrorsHandler(): AnalyzeErrorsHandler {
     return new AnalyzeErrorsHandler(
-      container.getExcelAnalyzer()
+      container.getFileRepository(),
+      container.getAnalysisRepository()
     )
   }
 
@@ -52,10 +54,8 @@ export class HandlerFactory {
   }
 
   // Excel Correction
-  static createApplyCorrectionsHandler(): ApplyCorrectionsHandler {
-    return new ApplyCorrectionsHandler(
-      container.getExcelAnalyzer()
-    )
+  static createApplyCorrectionsHandler(): ApplyCorrectionHandler {
+    return new ApplyCorrectionHandler()
   }
 
   // Excel Download
@@ -74,9 +74,11 @@ export class HandlerFactory {
     return new UpdateUserProfileHandler()
   }
 
-  // AI Chat
-  static createSendChatMessageHandler(): SendChatMessageHandler {
-    return new SendChatMessageHandler()
+  // AI Chat (비활성화됨)
+  static createSendChatMessageHandler(): any {
+    return {
+      handle: async () => ({ success: false, error: 'Chat feature temporarily disabled' })
+    }
   }
 
   // Authentication
@@ -85,9 +87,7 @@ export class HandlerFactory {
   }
 
   static createSignupHandler(): SignupHandler {
-    return new SignupHandler(
-      container.getNotificationService()
-    )
+    return new SignupHandler()
   }
 }
 

@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
       await prisma.user.update({
         where: { id: session.user.id },
         data: {
-          tokens: {
-            increment: 5 // 피드백 제공 시 5 토큰 보상
+          credits: {
+            increment: 5 // 피드백 제공 시 5 크레딧 보상
           }
         }
       })
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           userId: session.user.id,
           type: "BONUS",
           amount: 0,
-          tokens: 5,
+          credits: 5,
           description: "AI 응답 피드백 제공 보상",
           status: "COMPLETED",
         }
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "피드백이 저장되었습니다.",
-      tokensAwarded: rating || helpful !== undefined ? 5 : 0,
+      creditsAwarded: rating || helpful !== undefined ? 5 : 0,
     })
   } catch (error) {
     console.error("Feedback error:", error)

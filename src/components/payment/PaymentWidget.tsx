@@ -87,17 +87,15 @@ export function PaymentWidget({ plan, billingPeriod, onSuccess }: PaymentWidgetP
       })
 
       // Render payment methods widget
-      paymentMethodsWidgetRef.current = paymentWidget.renderPaymentMethods(
-        "#payment-methods",
-        { value: amount },
-        { variantKey: "DEFAULT" }
-      )
+      paymentMethodsWidgetRef.current = paymentWidget.renderPaymentMethods({
+        selector: "#payment-methods",
+        variantKey: "DEFAULT"
+      })
 
       // Render agreement widget
-      agreementWidgetRef.current = paymentWidget.renderAgreement(
-        "#agreement",
-        { variantKey: "DEFAULT" }
-      )
+      agreementWidgetRef.current = paymentWidget.renderAgreement({
+        selector: "#agreement"
+      })
 
       paymentWidgetRef.current = paymentWidget
       setLoading(false)

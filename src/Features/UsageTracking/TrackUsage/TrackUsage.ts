@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { Result } from "@/Common/Result"
 import { prisma } from "@/lib/prisma"
-import { TokenCheckService } from "@/Features/Billing/TokenManagement/ConsumeTokens"
+import { CreditCheckService } from "@/Features/Billing/CreditManagement/ConsumeCredits"
 
 // Request/Response types
 export class TrackUsage {
@@ -106,17 +106,17 @@ export class TrackUsageHandler {
         })
       }
 
-      // Check if user has enough tokens
-      const hasTokens = await TokenCheckService.hasEnoughTokens(
+      // Check if user has enough credits
+      const hasCredits = await CreditCheckService.hasEnoughCredits(
         request.userId,
         request.feature,
         1
       )
 
-      if (!hasTokens) {
+      if (!hasCredits) {
         return Result.success({
           allowed: false,
-          reason: "토큰이 부족합니다.",
+          reason: "크레딧이 부족합니다.",
           usage: await this.getUsageStats(request.userId, request.feature),
           limits: USAGE_LIMITS[subscription.plan][request.feature],
         })
@@ -148,7 +148,7 @@ export class TrackUsageHandler {
           daily: usage.daily + 1,
           weekly: usage.weekly + 1,
           monthly: usage.monthly + 1,
-          remaining: subscription.tokensRemaining,
+          remaining: subscription.creditsRemaining,
         },
         limits,
       })
@@ -194,7 +194,7 @@ export class TrackUsageHandler {
       }),
       prisma.subscription.findUnique({
         where: { userId },
-        select: { tokensRemaining: true },
+        select: { creditsRemaining: true },
       }),
     ])
 
@@ -202,7 +202,7 @@ export class TrackUsageHandler {
       daily,
       weekly,
       monthly,
-      remaining: subscription?.tokensRemaining || 0,
+      remaining: subscription?.creditsRemaining || 0,
     }
   }
 
@@ -225,7 +225,7 @@ export class TrackUsageHandler {
       data: {
         userId: request.userId,
         feature: request.feature,
-        metadata: request.metadata || {},
+        metadata: JSON.stringify(request.metadata || {}),
       },
     })
   }

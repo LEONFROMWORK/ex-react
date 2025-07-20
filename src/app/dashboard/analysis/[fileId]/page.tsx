@@ -241,7 +241,7 @@ export default function AnalysisPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>전체 진행률</span>
-            <Badge variant={isComplete ? "success" : "secondary"}>
+            <Badge variant={isComplete ? "default" : "secondary"}>
               {isComplete ? "완료" : "진행 중"}
             </Badge>
           </CardTitle>

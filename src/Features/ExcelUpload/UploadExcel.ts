@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { Result } from "@/Common/Result";
 import { ExcelErrors } from "@/Common/Errors";
-import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { IFileStorage as ContainerIFileStorage } from "@/Infrastructure/DependencyInjection/Container";
+import { IFileRepository } from "@/Common/Repositories/IFileRepository";
 
 // Request Schema
 export const UploadExcelRequestSchema = z.object({
@@ -91,8 +92,13 @@ export class LocalFileStorage implements IFileStorage {
 // Handler
 export class UploadExcelHandler {
   constructor(
-    private fileStorage: IFileStorage = new LocalFileStorage()
-  ) {}
+    private fileRepository: IFileRepository,
+    private fileStorage?: ContainerIFileStorage | IFileStorage
+  ) {
+    if (!this.fileStorage) {
+      this.fileStorage = new LocalFileStorage();
+    }
+  }
 
   async handle(
     request: UploadExcelRequest
@@ -111,30 +117,42 @@ export class UploadExcelHandler {
       const fileName = `${randomUUID()}.${fileExtension}`;
 
       // Upload file to storage
-      const uploadResult = await this.fileStorage.uploadAsync(file, fileName);
+      let uploadResult: Result<string>;
+      
+      if ('uploadAsync' in this.fileStorage && typeof this.fileStorage.uploadAsync === 'function') {
+        uploadResult = await this.fileStorage.uploadAsync(file, fileName);
+      } else {
+        // Fallback for Container IFileStorage
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const filePath = await (this.fileStorage as ContainerIFileStorage).save(buffer, fileName);
+        uploadResult = Result.success(filePath);
+      }
+      
       if (!uploadResult.isSuccess) {
         return Result.failure(uploadResult.error);
       }
 
-      // Save file metadata to database
-      const fileRecord = await prisma.file.create({
-        data: {
-          userId,
-          fileName,
-          originalName: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
-          uploadUrl: uploadResult.value,
-          status: "PENDING",
-        },
+      // Save file metadata to database using repository
+      const saveResult = await this.fileRepository.save({
+        userId,
+        fileName,
+        originalName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        uploadUrl: uploadResult.value,
+        status: "PENDING",
       });
 
+      if (!saveResult.isSuccess) {
+        return Result.failure(saveResult.error);
+      }
+
       const response: UploadExcelResponse = {
-        fileId: fileRecord.id,
-        fileName: fileRecord.originalName,
-        fileSize: fileRecord.fileSize,
-        status: fileRecord.status,
-        uploadedAt: fileRecord.createdAt,
+        fileId: saveResult.value,
+        fileName: file.name,
+        fileSize: file.size,
+        status: "PENDING",
+        uploadedAt: new Date(),
       };
 
       return Result.success(response);

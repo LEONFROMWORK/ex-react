@@ -2,7 +2,7 @@
 FROM node:18-alpine AS builder
 
 # Add necessary build tools
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat make g++
 
 WORKDIR /app
 

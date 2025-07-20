@@ -32,8 +32,9 @@ export class ExcelStreamBuilderService {
     options: StreamOptions = {}
   ): Promise<Result<Readable>> {
     try {
+      const outputStream = new PassThrough()
       const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-        stream: new PassThrough(),
+        stream: outputStream,
         useStyles: true,
         useSharedStrings: true,
       })
@@ -94,7 +95,7 @@ export class ExcelStreamBuilderService {
                 currentRow: processedRows,
                 totalRows,
                 percentage,
-                bytesProcessed: worksheet.stream.bytesWritten || 0,
+                bytesProcessed: 0, // Stream bytes tracking not available
                 estimatedTimeRemaining: Math.round(estimatedRemaining / 1000),
               })
             }
@@ -112,7 +113,8 @@ export class ExcelStreamBuilderService {
         // 수식 추가 (있는 경우)
         if (sheetData.formulas) {
           for (const formula of sheetData.formulas) {
-            worksheet.getCell(formula.cell).formula = formula.formula
+            const cell = worksheet.getCell(formula.cell)
+            cell.value = { formula: formula.formula }
           }
         }
 
@@ -131,7 +133,7 @@ export class ExcelStreamBuilderService {
           currentRow: totalRows,
           totalRows,
           percentage: 100,
-          bytesProcessed: workbook.stream.bytesWritten || 0,
+          bytesProcessed: 0, // Stream bytes tracking not available
         })
       }
 
@@ -146,11 +148,12 @@ export class ExcelStreamBuilderService {
           currentRow: totalRows,
           totalRows,
           percentage: 100,
-          bytesProcessed: workbook.stream.bytesWritten || 0,
+          bytesProcessed: 0, // Stream bytes tracking not available
         })
       }
 
-      return Result.success(workbook.stream as Readable)
+      // Return the stream that was passed to WorkbookWriter
+      return Result.success(outputStream)
     } catch (error) {
       console.error('Excel 스트림 생성 오류:', error)
       if (options.errorCallback) {
@@ -240,7 +243,7 @@ export class ExcelStreamBuilderService {
               currentRow: rowCount,
               totalRows: 0, // 스트림이므로 총 개수를 모름
               percentage: 0,
-              bytesProcessed: worksheet.stream.bytesWritten || 0,
+              bytesProcessed: 0, // Stream bytes tracking not available
               estimatedTimeRemaining: undefined,
             })
           }
@@ -275,7 +278,7 @@ export class ExcelStreamBuilderService {
             currentRow: rowCount,
             totalRows: rowCount,
             percentage: 100,
-            bytesProcessed: workbook.stream.bytesWritten || 0,
+            bytesProcessed: 0, // Stream bytes tracking not available
           })
         }
       })

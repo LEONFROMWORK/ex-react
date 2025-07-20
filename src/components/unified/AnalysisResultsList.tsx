@@ -53,7 +53,7 @@ export function AnalysisResultsList({ results }: AnalysisResultsListProps) {
       case 'high':
         return <Badge variant="destructive">높음</Badge>
       case 'medium':
-        return <Badge variant="warning">중간</Badge>
+        return <Badge variant="destructive">중간</Badge>
       default:
         return <Badge variant="secondary">낮음</Badge>
     }

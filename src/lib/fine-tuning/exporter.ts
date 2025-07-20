@@ -237,7 +237,7 @@ export class FineTuningExporter {
         totalRating += item.userRating
         ratingCount++
       }
-      totalTokens += item.tokenCount
+      totalTokens += item.creditCount || 0
 
       // Task type distribution
       const taskType = item.taskType || 'GENERAL'
@@ -290,7 +290,7 @@ export class FineTuningExporter {
       item.qualityScore?.toString() || '',
       item.userRating?.toString() || '',
       item.wasEdited ? 'Yes' : 'No',
-      item.tokenCount.toString(),
+      (item.creditCount || 0).toString(),
       item.responseTime.toString(),
       item.modelUsed,
       item.createdAt.toISOString()
@@ -332,10 +332,10 @@ export class FineTuningExporter {
     }
 
     // 토큰 분포 확인
-    const tokenCounts = data.map(d => d.tokenCount)
-    const avgTokens = tokenCounts.reduce((a, b) => a + b, 0) / tokenCounts.length
-    if (avgTokens > 2000) {
-      recommendations.push('평균 토큰 수가 높습니다. 더 간결한 응답을 수집하세요')
+    const creditCounts = data.map(d => d.creditCount || 0)
+    const avgCredits = creditCounts.reduce((a, b) => a + b, 0) / creditCounts.length
+    if (avgCredits > 20) {
+      recommendations.push('평균 크레딧 사용량이 높습니다. 더 간결한 응답을 수집하세요')
     }
 
     return {

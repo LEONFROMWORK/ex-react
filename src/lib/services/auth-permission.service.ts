@@ -38,7 +38,7 @@ export class AuthPermissionService {
   canAccessAdminPage(role: UserRole, path: string): boolean {
     // 정확한 경로 매칭
     if (ADMIN_MENU_ACCESS[path as keyof typeof ADMIN_MENU_ACCESS]) {
-      return ADMIN_MENU_ACCESS[path as keyof typeof ADMIN_MENU_ACCESS].includes(role)
+      return (ADMIN_MENU_ACCESS[path as keyof typeof ADMIN_MENU_ACCESS] as readonly UserRole[]).includes(role)
     }
     
     // 상위 경로로 권한 확인
@@ -46,7 +46,7 @@ export class AuthPermissionService {
     while (pathParts.length > 0) {
       const checkPath = pathParts.join('/')
       if (ADMIN_MENU_ACCESS[checkPath as keyof typeof ADMIN_MENU_ACCESS]) {
-        return ADMIN_MENU_ACCESS[checkPath as keyof typeof ADMIN_MENU_ACCESS].includes(role)
+        return (ADMIN_MENU_ACCESS[checkPath as keyof typeof ADMIN_MENU_ACCESS] as readonly UserRole[]).includes(role)
       }
       pathParts.pop()
     }
@@ -69,7 +69,7 @@ export class AuthPermissionService {
     if (!session?.user?.id) return false
     
     const role = await this.getUserRole(session.user.id)
-    return [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(role)
+    return ([USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN] as UserRole[]).includes(role)
   }
   
   // 서버 사이드 최고 관리자 권한 확인

@@ -371,7 +371,7 @@ ${contextDocs}
     }
 
     const queryEmbedding = await this.embeddingGenerator.generateSingleEmbedding(question)
-    const results = await this.vectorDB.searchByCategory(queryEmbedding, category, this.config.maxResults!)
+    const results = await this.vectorDB.search(queryEmbedding, this.config.maxResults!)
     
     const context = this.buildContext(question, results)
     const answer = await this.generateAIAnswer(context)
@@ -396,7 +396,7 @@ ${contextDocs}
     }
 
     const queryEmbedding = await this.embeddingGenerator.generateSingleEmbedding(question)
-    const results = await this.vectorDB.searchByQuality(queryEmbedding, minQuality, this.config.maxResults!)
+    const results = await this.vectorDB.search(queryEmbedding, this.config.maxResults!)
     
     const context = this.buildContext(question, results)
     const answer = await this.generateAIAnswer(context)
@@ -432,7 +432,7 @@ ${contextDocs}
       throw new Error('RAG 서비스가 초기화되지 않았습니다')
     }
 
-    return await this.vectorDB.getCollectionStats()
+    return await (this.vectorDB as any).getStats()
   }
 
   /**

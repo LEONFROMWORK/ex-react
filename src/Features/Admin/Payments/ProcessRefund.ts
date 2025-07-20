@@ -58,12 +58,12 @@ export class ProcessRefundHandler {
             amount: -request.amount, // Negative amount for refund
             description: `환불: ${request.reason}`,
             status: "COMPLETED",
-            metadata: {
+            metadata: JSON.stringify({
               originalPaymentId: payment.id,
               orderId: payment.orderId,
               reason: request.reason,
               adminId: request.adminId,
-            },
+            }),
           },
         });
 
@@ -73,27 +73,28 @@ export class ProcessRefundHandler {
           where: { id: payment.id },
           data: {
             status: isPartialRefund ? "PARTIALLY_REFUNDED" : "CANCELED",
-            metadata: {
-              ...payment.metadata,
+            metadata: JSON.stringify({
+              ...(typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata),
               refundAmount: request.amount,
               refundReason: request.reason,
               refundedAt: new Date(),
               refundedBy: request.adminId,
-            },
+            }),
           },
         });
 
-        // Return tokens to user if applicable
-        if (payment.metadata?.tokensGranted) {
-          const tokensToReturn = Math.floor(
-            (request.amount / payment.amount) * payment.metadata.tokensGranted
+        // Return credits to user if applicable
+        const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata;
+        if (metadata?.creditsGranted) {
+          const creditsToReturn = Math.floor(
+            (request.amount / payment.amount) * metadata.creditsGranted
           );
           
           await tx.user.update({
             where: { id: payment.userId },
             data: {
-              tokens: {
-                increment: tokensToReturn,
+              credits: {
+                increment: creditsToReturn,
               },
             },
           });
@@ -106,11 +107,11 @@ export class ProcessRefundHandler {
             action: "PAYMENT_REFUND",
             targetType: "payment",
             targetId: payment.id,
-            metadata: {
+            metadata: JSON.stringify({
               amount: request.amount,
               reason: request.reason,
               isPartialRefund,
-            },
+            }),
           },
         });
 

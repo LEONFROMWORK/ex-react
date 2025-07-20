@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
-  ChartPie,
+  PieChart as ChartPie,
   Code2,
   AlertTriangle,
   CheckCircle,
@@ -113,7 +113,7 @@ export function VBAAnalysisReport({ analysis }: VBAAnalysisReportProps) {
 
   const getScoreBadge = (score: number) => {
     if (score >= 80) return 'default'
-    if (score >= 60) return 'warning'
+    if (score >= 60) return 'secondary'
     return 'destructive'
   }
 
@@ -314,7 +314,7 @@ export function VBAAnalysisReport({ analysis }: VBAAnalysisReportProps) {
                     <CardContent className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm">순환 복잡도</span>
-                        <Badge variant={module.analysis.complexity.cyclomaticComplexity > 10 ? 'warning' : 'default'}>
+                        <Badge variant={module.analysis.complexity.cyclomaticComplexity > 10 ? 'destructive' : 'default'}>
                           {module.analysis.complexity.cyclomaticComplexity}
                         </Badge>
                       </div>
@@ -479,7 +479,7 @@ export function VBAAnalysisReport({ analysis }: VBAAnalysisReportProps) {
                   <Badge
                     variant={
                       rec.priority === 'high' ? 'destructive' :
-                      rec.priority === 'medium' ? 'warning' : 'secondary'
+                      rec.priority === 'medium' ? 'destructive' : 'secondary'
                     }
                   >
                     {rec.priority === 'high' ? '높음' :

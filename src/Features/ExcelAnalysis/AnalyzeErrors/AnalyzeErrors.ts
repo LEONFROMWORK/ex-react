@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { Result } from "@/Common/Result";
 import { ExcelErrors } from "@/Common/Errors";
-import { prisma } from "@/lib/prisma";
 import { analyzeExcelFile } from "@/lib/excel/analyzer-enhanced";
-import { ExcelAnalysisResult } from "@/types/excel";
+import { AnalysisResult as ExcelAnalysisResult } from "@/types/excel";
 import { SaveErrorPatternHandler } from "@/Features/ErrorPatterns/SaveErrorPattern";
+import { IFileRepository } from "@/Common/Repositories/IFileRepository";
+import { IAnalysisRepository } from "@/Common/Repositories/IAnalysisRepository";
+import { TransactionManager } from "@/Common/Database/TransactionUtils";
+import { prisma } from "@/lib/prisma";
+import fs from "fs";
 
 // Request Schema
 export const AnalyzeErrorsRequestSchema = z.object({
@@ -66,75 +70,115 @@ export class ErrorDetectionRules {
 
 // Handler
 export class AnalyzeErrorsHandler {
+  private transactionManager: TransactionManager;
+
+  constructor(
+    private fileRepository: IFileRepository,
+    private analysisRepository: IAnalysisRepository
+  ) {
+    this.transactionManager = new TransactionManager(prisma);
+  }
+
   async handle(
     request: AnalyzeErrorsRequest
   ): Promise<Result<AnalyzeErrorsResponse>> {
     try {
-      // Validate file ownership
-      const file = await prisma.file.findFirst({
-        where: {
-          id: request.fileId,
-          userId: request.userId,
-        },
-      });
+      // Validate file ownership using repository
+      const fileResult = await this.fileRepository.findByUserAndId(request.userId, request.fileId);
+      if (!fileResult.isSuccess) {
+        return Result.failure(fileResult.error);
+      }
 
+      const file = fileResult.value;
       if (!file) {
         return Result.failure(ExcelErrors.NotFound);
       }
 
-      // Update file status
-      await prisma.file.update({
-        where: { id: request.fileId },
-        data: { status: "PROCESSING" },
-      });
+      // 트랜잭션으로 분석 프로세스 전체를 감싸기
+      const transactionResult = await this.transactionManager.withRetryableTransaction(
+        async (tx) => {
+          // Update file status to processing
+          await tx.file.update({
+            where: { id: request.fileId },
+            data: { status: "PROCESSING" }
+          });
 
-      // Perform analysis based on type
-      const analysisResult = await this.performAnalysis(
-        file.uploadUrl,
-        request.analysisType
+          // Perform analysis based on type
+          const analysisResult = await this.performAnalysis(
+            file.uploadUrl,
+            request.analysisType
+          );
+
+          if (!analysisResult.isSuccess) {
+            // Update file status to failed in transaction
+            await tx.file.update({
+              where: { id: request.fileId },
+              data: { status: "FAILED" }
+            });
+            throw new Error(analysisResult.error?.message || 'Analysis failed');
+          }
+
+          // Save analysis results in transaction
+          const analysisData = {
+            fileId: request.fileId,
+            userId: request.userId,
+            errors: JSON.stringify([]), // 임시로 빈 배열
+            corrections: JSON.stringify([]), // 임시로 빈 배열
+            report: JSON.stringify(analysisResult.value),
+            aiTier: "TIER1",
+            confidence: 0.8,
+            creditsUsed: 10,
+            promptTokens: 100,
+            completionTokens: 50,
+            estimatedCost: 0.01,
+            processingPath: "standard_analysis"
+          };
+
+          const analysis = await tx.analysis.create({
+            data: analysisData
+          });
+
+          // Update file status to completed
+          await tx.file.update({
+            where: { id: request.fileId },
+            data: { status: "COMPLETED" }
+          });
+
+          return {
+            analysis,
+            analysisResult: analysisResult.value
+          };
+        },
+        {
+          maxWait: 10000, // 10초 대기
+          timeout: 30000, // 30초 타임아웃
+          isolationLevel: 'ReadCommitted'
+        }
       );
 
-      if (!analysisResult.isSuccess) {
-        await prisma.file.update({
-          where: { id: request.fileId },
-          data: { status: "FAILED" },
-        });
-        return Result.failure(analysisResult.error);
+      if (!transactionResult.isSuccess) {
+        return Result.failure(transactionResult.error);
       }
 
-      // Save analysis results
-      const analysis = await prisma.analysis.create({
-        data: {
-          fileId: request.fileId,
-          userId: request.userId,
-          type: request.analysisType,
-          results: analysisResult.value,
-          status: "COMPLETED",
-        },
-      });
-
-      // Update file status
-      await prisma.file.update({
-        where: { id: request.fileId },
-        data: { 
-          status: "COMPLETED",
-          analysisId: analysis.id,
-        },
-      });
+      const { analysis, analysisResult } = transactionResult.value;
 
       // Transform to response
-      const errors = this.transformErrors(analysisResult.value);
+      const errors = this.transformErrors(analysisResult);
       const response: AnalyzeErrorsResponse = {
         analysisId: analysis.id,
         fileId: request.fileId,
         errors,
-        summary: this.generateSummary(analysisResult.value),
-        status: analysis.status,
+        summary: this.generateSummary(analysisResult),
+        status: "COMPLETED",
         analyzedAt: analysis.createdAt,
       };
 
-      // Save error patterns for future analysis
-      await this.saveErrorPatterns(request.fileId, request.userId, errors);
+      // Save error patterns for future analysis (별도 트랜잭션)
+      try {
+        await this.saveErrorPatterns(request.fileId, request.userId, errors);
+      } catch (error) {
+        console.warn('Failed to save error patterns, but analysis completed successfully:', error);
+      }
 
       return Result.success(response);
     } catch (error) {
@@ -148,8 +192,9 @@ export class AnalyzeErrorsHandler {
     analysisType: string
   ): Promise<Result<ExcelAnalysisResult>> {
     try {
-      // Use existing analyzer
-      const result = await analyzeExcelFile(filePath);
+      // analyzeExcelFile expects a Buffer, not a file path
+      const fileBuffer = fs.readFileSync(filePath);
+      const result = await analyzeExcelFile(fileBuffer);
       return Result.success(result);
     } catch (error) {
       console.error("Analysis error:", error);
@@ -160,22 +205,18 @@ export class AnalyzeErrorsHandler {
   private transformErrors(analysisResult: ExcelAnalysisResult): ErrorDetail[] {
     const errors: ErrorDetail[] = [];
 
-    // Transform formula errors
-    analysisResult.sheets.forEach(sheet => {
-      sheet.formulaErrors?.forEach(error => {
-        errors.push({
-          type: "formula",
-          severity: "error",
-          location: {
-            sheet: sheet.name,
-            cell: error.cell,
-          },
-          message: error.error,
-          suggestion: this.getSuggestion(error.error),
-        });
+    // Transform errors from AnalysisResult
+    analysisResult.errors?.forEach(error => {
+      errors.push({
+        type: error.type.toLowerCase() as any,
+        severity: this.mapSeverity(error.severity),
+        location: {
+          sheet: this.extractSheetFromLocation(error.location),
+          cell: this.extractCellFromLocation(error.location),
+        },
+        message: error.description,
+        suggestion: error.suggestion || this.getSuggestion(error.description),
       });
-
-      // Transform other error types as needed
     });
 
     return errors;
@@ -190,12 +231,13 @@ export class AnalyzeErrorsHandler {
     };
     const affectedSheets = new Set<string>();
 
-    analysisResult.sheets.forEach(sheet => {
-      if (sheet.formulaErrors?.length > 0) {
-        affectedSheets.add(sheet.name);
-        errorsByType.formula = (errorsByType.formula || 0) + sheet.formulaErrors.length;
-        errorsBySeverity.error += sheet.formulaErrors.length;
-      }
+    analysisResult.errors?.forEach(error => {
+      const sheetName = this.extractSheetFromLocation(error.location);
+      affectedSheets.add(sheetName);
+      
+      const errorType = error.type.toLowerCase();
+      errorsByType[errorType] = (errorsByType[errorType] || 0) + 1;
+      errorsBySeverity[error.severity] = (errorsBySeverity[error.severity] || 0) + 1;
     });
 
     return {
@@ -204,6 +246,27 @@ export class AnalyzeErrorsHandler {
       errorsBySeverity,
       affectedSheets: Array.from(affectedSheets),
     };
+  }
+
+  private extractSheetFromLocation(location: string): string {
+    // location 형태: "Sheet1!A1" 또는 "A1"
+    const parts = location.split('!');
+    return parts.length > 1 ? parts[0] : 'Sheet1';
+  }
+
+  private extractCellFromLocation(location: string): string {
+    // location 형태: "Sheet1!A1" 또는 "A1"
+    const parts = location.split('!');
+    return parts.length > 1 ? parts[1] : parts[0];
+  }
+
+  private mapSeverity(severity: "low" | "medium" | "high"): "error" | "warning" | "info" {
+    switch (severity) {
+      case "high": return "error";
+      case "medium": return "warning";
+      case "low": return "info";
+      default: return "info";
+    }
   }
 
   private getSuggestion(error: string): string {

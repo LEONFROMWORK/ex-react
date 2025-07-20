@@ -106,9 +106,9 @@ export class CreatePaymentIntentHandler {
           status: "PENDING",
           subscriptionPlan: request.subscriptionPlan,
           billingPeriod: request.billingPeriod,
-          metadata: {
+          metadata: JSON.stringify({
             discountCode: request.discountCode,
-          },
+          }),
         },
       })
 

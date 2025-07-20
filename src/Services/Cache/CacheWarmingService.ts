@@ -246,7 +246,7 @@ export class CacheWarmingService {
         userId: 'system-warming',
         options: {
           includeFormulas: true,
-          includeFormatting: true,
+          applyFormatting: true,
         },
       })
 

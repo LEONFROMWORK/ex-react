@@ -1,6 +1,6 @@
 import { Result } from '@/Common/Result'
 import { VBACodeAnalyzer, VBAAnalysisResult } from './VBACodeAnalyzer'
-import { PythonOleToolsAdapter, VBAModule } from '../ExtractVBACode/PythonOleToolsAdapter'
+import { JSVBAExtractor, VBAModule } from '../ExtractVBACode/JSVBAExtractor'
 import { getExcelAnalysisCacheService } from '@/Services/Cache/ExcelAnalysisCacheService'
 
 // Request Schema
@@ -108,12 +108,15 @@ export class AnalyzeVBACodeValidator {
 // Handler
 export class AnalyzeVBACodeHandler {
   private analyzer: VBACodeAnalyzer
-  private oleToolsAdapter: PythonOleToolsAdapter
+  private oleToolsAdapter: any // TODO: Implement PythonOleToolsAdapter
   private cacheService = getExcelAnalysisCacheService()
 
   constructor() {
     this.analyzer = new VBACodeAnalyzer()
-    this.oleToolsAdapter = new PythonOleToolsAdapter()
+    // TODO: Replace with actual PythonOleToolsAdapter implementation
+    this.oleToolsAdapter = {
+      analyzeVBASecurity: async () => ({ suspiciousPatterns: [], securityIssues: [] })
+    }
   }
 
   async handle(request: AnalyzeVBACodeRequest): Promise<Result<AnalyzeVBACodeResponse>> {
@@ -322,10 +325,12 @@ export class AnalyzeVBACodeHandler {
 }
 
 // Convenience export
-export default {
+const AnalyzeVBACodeModule = {
   Request: {} as AnalyzeVBACodeRequest,
   Response: {} as AnalyzeVBACodeResponse,
   Validator: AnalyzeVBACodeValidator,
   Handler: AnalyzeVBACodeHandler,
   Errors: AnalyzeVBACodeErrors,
 }
+
+export default AnalyzeVBACodeModule

@@ -50,12 +50,19 @@ export async function GET(req: NextRequest) {
           referralCode,
           referralLink,
           rewardType: "PAYMENT_BASED",
-          tokenRewardAmount: 100
+          creditRewardAmount: 100
         },
         include: {
           referralRewards: {
             orderBy: { createdAt: 'desc' },
-            take: 10
+            take: 10,
+            include: {
+              referral: {
+                include: {
+                  user: true
+                }
+              }
+            }
           }
         }
       })
@@ -72,7 +79,7 @@ export async function GET(req: NextRequest) {
         return {
           id: reward.id,
           type: reward.rewardType,
-          amount: reward.tokensAwarded,
+          amount: reward.creditsAwarded,
           date: reward.createdAt,
           refereeEmail: referee?.email || "Unknown"
         }
@@ -96,7 +103,7 @@ export async function GET(req: NextRequest) {
       referralCode: referral.referralCode,
       referralLink: referral.referralLink,
       totalReferrals: referral.referralCount,
-      totalTokensEarned: referral.totalTokensEarned,
+      totalCreditsEarned: referral.totalCreditsEarned,
       totalCashEarned: referral.totalEarned,
       pendingRewards,
       recentRewards

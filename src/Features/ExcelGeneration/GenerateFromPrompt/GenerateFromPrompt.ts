@@ -185,15 +185,16 @@ export class GenerateFromPromptHandler {
     // Prisma를 사용한 데이터베이스 저장
     try {
       const prisma = container.getPrisma()
-      await prisma.generatedFile.create({
+      await prisma.file.create({
         data: {
-          fileId: data.fileId,
+          id: data.fileId,
           userId: data.userId,
           fileName: data.fileName,
+          originalName: data.fileName,
           fileSize: data.fileSize,
-          prompt: data.prompt,
-          metadata: data.metadata,
-          createdAt: new Date(),
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          uploadUrl: data.downloadUrl || '',
+          status: 'COMPLETED',
         },
       })
     } catch (error) {

@@ -1,21 +1,44 @@
 import ExcelJS from "exceljs"
 import { ExcelError, ErrorType, AnalysisResult } from "@/types/excel"
 import { FormulaEngine } from "./formula-engine"
+import { StreamingExcelAnalyzer } from "./streaming-analyzer"
+import { Result } from "@/Common/Result"
+import fs from "fs"
+
+// 파일 크기 임계값 (10MB)
+const STREAMING_THRESHOLD = 10 * 1024 * 1024;
 
 export async function analyzeExcelFile(fileBuffer: Buffer): Promise<AnalysisResult> {
-  const analyzer = new EnhancedExcelAnalyzer()
   const tempPath = `/tmp/excel-${Date.now()}.xlsx`
   
   // Write buffer to temp file
-  const fs = require('fs').promises
-  await fs.writeFile(tempPath, fileBuffer)
+  await fs.promises.writeFile(tempPath, fileBuffer)
   
   try {
-    const result = await analyzer.analyzeFile(tempPath)
-    return result
+    // 파일 크기에 따라 분석 방법 선택
+    const fileSize = fileBuffer.length;
+    
+    if (fileSize > STREAMING_THRESHOLD) {
+      console.log(`Large file detected (${Math.round(fileSize / 1024 / 1024)}MB), using streaming analysis`);
+      const streamingAnalyzer = new StreamingExcelAnalyzer();
+      const result = await streamingAnalyzer.analyzeFileStream(tempPath);
+      
+      if (result.isSuccess) {
+        return result.value;
+      } else {
+        // 스트리밍 실패시 일반 분석으로 fallback
+        console.warn('Streaming analysis failed, falling back to regular analysis');
+        const analyzer = new EnhancedExcelAnalyzer();
+        return await analyzer.analyzeFile(tempPath);
+      }
+    } else {
+      console.log(`Small file detected (${Math.round(fileSize / 1024 / 1024)}MB), using regular analysis`);
+      const analyzer = new EnhancedExcelAnalyzer();
+      return await analyzer.analyzeFile(tempPath);
+    }
   } finally {
     // Clean up temp file
-    await fs.unlink(tempPath).catch(() => {})
+    await fs.promises.unlink(tempPath).catch(() => {});
   }
 }
 
@@ -73,8 +96,8 @@ export class EnhancedExcelAnalyzer {
         summary: "파일 분석 중 오류가 발생했습니다.",
       }
     } finally {
-      // Clean up
-      this.formulaEngine.destroy()
+      // Clean up resources
+      await this.cleanup();
     }
   }
 
@@ -425,5 +448,43 @@ export class EnhancedExcelAnalyzer {
 
   async getWorkbookBuffer(workbook: ExcelJS.Workbook): Promise<Buffer> {
     return Buffer.from(await workbook.xlsx.writeBuffer())
+  }
+
+  /**
+   * 메모리 정리 및 리소스 해제
+   */
+  private async cleanup(): Promise<void> {
+    try {
+      // Formula engine 정리
+      if (this.formulaEngine) {
+        await this.formulaEngine.destroy();
+      }
+
+      // Workbook 정리
+      if (this.workbook) {
+        // 워크시트 정리
+        this.workbook.eachSheet((worksheet) => {
+          // @ts-ignore - ExcelJS internal cleanup
+          if (worksheet.destroy) {
+            worksheet.destroy();
+          }
+        });
+        
+        // 워크북 참조 제거
+        this.workbook = null;
+      }
+
+      // 에러 배열 정리
+      this.errors = [];
+
+      // 명시적 가비지 컬렉션 힌트
+      if (global.gc) {
+        global.gc();
+      }
+
+      console.log('Excel analyzer cleanup completed');
+    } catch (error) {
+      console.warn('Error during cleanup:', error);
+    }
   }
 }

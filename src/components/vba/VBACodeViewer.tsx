@@ -85,7 +85,7 @@ export function VBACodeViewer({
       case 'high':
         return 'destructive'
       case 'medium':
-        return 'warning'
+        return 'destructive'
       case 'low':
         return 'secondary'
       default:
@@ -135,7 +135,7 @@ export function VBACodeViewer({
     <div className="space-y-6">
       {/* 보안 스캔 결과 */}
       {securityScan && securityScan.summary.totalThreats > 0 && (
-        <Alert variant={securityScan.summary.criticalCount > 0 ? 'destructive' : 'warning'}>
+        <Alert variant={securityScan.summary.criticalCount > 0 ? 'destructive' : 'default'}>
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle>보안 스캔 결과</AlertTitle>
           <AlertDescription>
@@ -153,7 +153,7 @@ export function VBACodeViewer({
                   </Badge>
                 )}
                 {securityScan.summary.mediumCount > 0 && (
-                  <Badge variant="warning">
+                  <Badge variant="destructive">
                     중간: {securityScan.summary.mediumCount}
                   </Badge>
                 )}

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
           priority: 100,
           maxTokens: 2000,
           temperature: 0.7,
-          costPerToken: 0.0007,
+          costPerCredit: 0.0007,
           taskTypes: ['EXCEL_ANALYSIS', 'ERROR_CORRECTION', 'FORMULA_GENERATION', 'GENERAL'],
           complexity: ['SIMPLE', 'MEDIUM', 'COMPLEX'],
         }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
           priority: 100,
           maxTokens: 2000,
           temperature: 0.7,
-          costPerToken: 0.0007,
+          costPerCredit: 0.0007,
           taskTypes: ['EXCEL_ANALYSIS', 'ERROR_CORRECTION', 'FORMULA_GENERATION', 'GENERAL'],
           complexity: ['SIMPLE', 'MEDIUM', 'COMPLEX'],
         }

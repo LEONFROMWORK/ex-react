@@ -147,7 +147,7 @@ export class AIModelManager {
 
       // 비용 한도 확인
       const costThreshold = routingConfig.costThreshold || criteria.costLimit
-      if (costThreshold && config.costPerToken > costThreshold) {
+      if (costThreshold && config.costPerCredit > costThreshold) {
         return false
       }
 
@@ -170,7 +170,7 @@ export class AIModelManager {
 
     // 비용 최적화 적용
     if (routingConfig.enableCostOptimization) {
-      eligibleConfigs.sort((a, b) => a.costPerToken - b.costPerToken)
+      eligibleConfigs.sort((a, b) => a.costPerCredit - b.costPerCredit)
     }
     
     // 프로바이더 우선순위 적용
@@ -191,12 +191,12 @@ export class AIModelManager {
           return b.priority - a.priority
         }
         // Then by cost (lower is better)
-        return a.costPerToken - b.costPerToken
+        return a.costPerCredit - b.costPerCredit
       })
     }
 
     // Select the best model
-    const selectedConfig = sortedConfigs[0]
+    const selectedConfig = eligibleConfigs[0]
     return {
       provider: this.providers.get(selectedConfig.id)!,
       config: selectedConfig

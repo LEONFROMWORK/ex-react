@@ -68,7 +68,7 @@ const statusLabels = {
 const statusColors = {
   PENDING: 'secondary',
   PROCESSING: 'default',
-  COMPLETED: 'success',
+  COMPLETED: 'outline',
   FAILED: 'destructive'
 } as const
 

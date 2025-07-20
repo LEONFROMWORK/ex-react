@@ -69,11 +69,11 @@ export class LoginHandler {
         return Result.failure(AuthErrors.InvalidCredentials);
       }
 
-      // Update last login
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLogin: new Date() },
-      });
+      // Update last login - commented out if field doesn't exist in schema
+      // await prisma.user.update({
+      //   where: { id: user.id },
+      //   data: { lastLogin: new Date() },
+      // });
 
       const response: LoginResponse = {
         userId: user.id,

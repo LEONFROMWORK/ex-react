@@ -101,7 +101,7 @@ export class GetUsageReportHandler {
             gte: startDate,
             lte: endDate,
           },
-          tokens: { not: null },
+          credits: { not: null },
         },
       })
 
@@ -120,8 +120,8 @@ export class GetUsageReportHandler {
         timeline,
         subscription: {
           plan: subscription.plan,
-          tokensRemaining: subscription.tokensRemaining,
-          monthlyTokens: subscription.monthlyTokens,
+          creditsRemaining: subscription.creditsRemaining,
+          monthlyCredits: subscription.monthlyCredits,
           renewalDate: subscription.currentPeriodEnd,
         },
       })
@@ -177,7 +177,7 @@ export class GetUsageReportHandler {
     }, {} as Record<string, number>)
 
     const mostUsedFeature = Object.entries(featureCounts).sort(
-      ([, a], [, b]) => b - a
+      ([, a], [, b]) => (b as number) - (a as number)
     )[0]?.[0] || "none"
 
     const days = Math.max(1, Math.ceil(
@@ -211,9 +211,9 @@ export class GetUsageReportHandler {
 
     return Object.entries(featureStats).map(([feature, stats]) => ({
       feature,
-      count: stats.count,
-      tokensUsed: Math.round((stats.count / totalUsage) * totalTokens),
-      percentage: Math.round((stats.count / totalUsage) * 100),
+      count: (stats as any).count || 0,
+      creditsUsed: Math.round(((stats as any).count || 0) / totalUsage * totalTokens),
+      percentage: Math.round(((stats as any).count || 0) / totalUsage * 100),
     }))
   }
 

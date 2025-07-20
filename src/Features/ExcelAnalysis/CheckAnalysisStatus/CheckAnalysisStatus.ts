@@ -41,7 +41,7 @@ export class CheckAnalysisStatusValidator {
           message: error.errors.map(e => e.message).join(", "),
         })
       }
-      return Result.failure(ExcelErrors.InvalidRequest)
+      return Result.failure(ExcelErrors.InvalidFormat)
     }
   }
 }
@@ -64,7 +64,7 @@ export class CheckAnalysisStatusHandler {
       })
 
       if (!file) {
-        return Result.failure(ExcelErrors.FileNotFound)
+        return Result.failure(ExcelErrors.NotFound)
       }
 
       // Calculate progress based on status
@@ -104,7 +104,7 @@ export class CheckAnalysisStatusHandler {
           correctedErrors: (analysis.report as any).correctedErrors || 0,
           analysisId: analysis.id,
         }
-        response.aiTier = analysis.aiTier
+        response.aiTier = analysis.aiTier as "TIER1" | "TIER2"
         response.estimatedCost = analysis.estimatedCost
       }
 

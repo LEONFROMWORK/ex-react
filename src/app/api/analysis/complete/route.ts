@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
     // 사용자의 토큰이 부족한지 확인
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { tokens: true }
+      select: { credits: true }
     })
 
-    if (user && user.tokens < 50) {
+    if (user && user.credits < 50) {
       // 토큰 부족 알림도 전송
       await notificationService.sendLowTokensWarning(
         session.user.id,
-        user.tokens
+        user.credits
       )
     }
 

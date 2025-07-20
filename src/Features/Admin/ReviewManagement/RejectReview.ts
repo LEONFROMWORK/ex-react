@@ -59,9 +59,9 @@ export class RejectReviewHandler {
           action: "REVIEW_REJECTED",
           targetType: "review",
           targetId: request.reviewId,
-          metadata: {
+          metadata: JSON.stringify({
             reason: request.reason,
-          },
+          }),
         },
       });
 

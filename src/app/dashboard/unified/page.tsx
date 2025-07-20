@@ -22,7 +22,7 @@ import {
 // Store and services
 import { useFileStore } from '@/lib/stores/fileStore'
 import { useAnalysisService, useErrorCorrectionService } from '@/lib/services/container'
-import { TokenService, TOKEN_COSTS } from '@/lib/services/token.service'
+import { TokenService, TOKEN_COSTS } from '@/lib/services/credit.service'
 import { UserTierService } from '@/lib/services/user-tier.service'
 import { useSession } from 'next-auth/react'
 
@@ -253,9 +253,10 @@ export default function UnifiedAnalysisPage() {
       }
       
       // 자동 수정 기능 사용 가능 여부 확인
-      const canAutoFix = await userTierService.canUseFeature(session.user.id, 'autoFixEnabled')
+      const userTier = await userTierService.getUserTier(session.user.id)
+      const analysisOptions = userTierService.getAnalysisOptions(userTier)
+      const canAutoFix = analysisOptions.autoFixEnabled
       if (!canAutoFix) {
-        const userTier = await userTierService.getUserTier(session.user.id)
         setError({
           title: '기능 제한',
           message: '자동 수정 기능은 베이직 이상 등급에서 사용 가능합니다.',
@@ -272,8 +273,8 @@ export default function UnifiedAnalysisPage() {
       
       // 토큰 확인
       const tokenService = TokenService.getInstance()
-      const userTier = await userTierService.getUserTier(session.user.id)
-      const tierCost = userTierService.getTokenCost(userTier, 'AUTO_FIX_PER_ERROR')
+      const currentUserTier = await userTierService.getUserTier(session.user.id)
+      const tierCost = userTierService.getTokenCost(currentUserTier, 'AUTO_FIX_PER_ERROR')
       
       if (tierCost === null) {
         throw new Error('자동 수정 기능을 사용할 수 없습니다.')
@@ -449,7 +450,7 @@ export default function UnifiedAnalysisPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">상태:</span>
-                    <Badge variant={currentFile.status === 'completed' ? 'success' : 'secondary'}>
+                    <Badge variant={currentFile.status === 'completed' ? 'default' : 'secondary'}>
                       {currentFile.status === 'completed' ? '분석 완료' : '분석 중'}
                     </Badge>
                   </div>
@@ -475,7 +476,7 @@ export default function UnifiedAnalysisPage() {
                       <AlertCircle className="h-4 w-4 text-yellow-500" />
                       <span className="text-sm">경고</span>
                     </div>
-                    <Badge variant="warning">{warningCount}</Badge>
+                    <Badge variant="destructive">{warningCount}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

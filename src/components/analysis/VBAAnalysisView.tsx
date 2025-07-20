@@ -95,12 +95,12 @@ const severityIcons = {
 
 const severityColors = {
   error: 'destructive',
-  warning: 'warning',
-  info: 'secondary',
+  warning: 'destructive',
+  info: 'default',
   critical: 'destructive',
   high: 'destructive',
-  medium: 'warning',
-  low: 'secondary'
+  medium: 'destructive',
+  low: 'default'
 } as const
 
 export function VBAAnalysisView({ 

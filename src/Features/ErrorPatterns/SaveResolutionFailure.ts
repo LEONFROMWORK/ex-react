@@ -35,7 +35,7 @@ export class SaveResolutionFailureHandler {
           userId: request.userId,
           failureReason: request.failureReason,
           failureDetails: request.failureDetails,
-          attemptedMethods: request.attemptedMethods,
+          attemptedMethods: JSON.stringify(request.attemptedMethods),
           errorSnapshot: request.errorSnapshot,
           userFeedback: request.userFeedback,
         },

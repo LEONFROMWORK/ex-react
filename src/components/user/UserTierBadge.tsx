@@ -26,7 +26,7 @@ const tierIcons = {
 const tierColors = {
   [USER_TIERS.FREE]: 'secondary',
   [USER_TIERS.BASIC]: 'default',
-  [USER_TIERS.PRO]: 'primary',
+  [USER_TIERS.PRO]: 'destructive',
   [USER_TIERS.ENTERPRISE]: 'destructive'
 } as const
 

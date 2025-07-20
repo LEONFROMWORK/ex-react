@@ -142,15 +142,15 @@ export default async function UserDetailPage({
             <CardContent className="space-y-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Coins className="h-4 w-4" /> 토큰 잔액
+                  <Coins className="h-4 w-4" /> 크레딧 잔액
                 </p>
-                <p className="text-2xl font-bold">{user.tokens.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{user.credits.toLocaleString()}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Activity className="h-4 w-4" /> 총 사용 토큰
+                  <Activity className="h-4 w-4" /> 총 사용 크레딧
                 </p>
-                <p className="text-xl font-semibold">{user.stats.totalTokensUsed.toLocaleString()}</p>
+                <p className="text-xl font-semibold">{user.stats.totalCreditsUsed?.toLocaleString() || '0'}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -168,15 +168,15 @@ export default async function UserDetailPage({
           </Card>
         </div>
 
-        {/* 최근 토큰 거래 */}
+        {/* 최근 크레딧 거래 */}
         <Card>
           <CardHeader>
-            <CardTitle>최근 토큰 거래</CardTitle>
+            <CardTitle>최근 크레딧 거래</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {user.tokenTransactions.length > 0 ? (
-                user.tokenTransactions.map((tx) => (
+              {user.creditTransactions?.length > 0 ? (
+                user.creditTransactions.map((tx) => (
                   <div key={tx.id} className="flex justify-between items-center py-2 border-b last:border-0">
                     <div>
                       <p className="font-medium">{tx.reason}</p>
@@ -193,7 +193,7 @@ export default async function UserDetailPage({
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-center py-4">토큰 거래 내역이 없습니다</p>
+                <p className="text-muted-foreground text-center py-4">크레딧 거래 내역이 없습니다</p>
               )}
             </div>
           </CardContent>
@@ -206,7 +206,7 @@ export default async function UserDetailPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {user.files.length > 0 ? (
+              {user.files?.length > 0 ? (
                 user.files.map((file) => (
                   <div key={file.id} className="flex justify-between items-center py-2 border-b last:border-0">
                     <div>
@@ -234,7 +234,7 @@ export default async function UserDetailPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {user.payments.length > 0 ? (
+              {user.payments?.length > 0 ? (
                 user.payments.map((payment) => (
                   <div key={payment.id} className="flex justify-between items-center py-2 border-b last:border-0">
                     <div>

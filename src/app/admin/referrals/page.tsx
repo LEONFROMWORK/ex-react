@@ -42,7 +42,7 @@ interface ReferralData {
   userEmail: string
   referralCode: string
   referralCount: number
-  totalTokensEarned: number
+  totalCreditsEarned: number
   totalEarned: number
   rewardType: string
   createdAt: Date
@@ -56,7 +56,7 @@ interface ReferralReward {
   refereeName: string
   refereeEmail: string
   rewardType: string
-  tokensAwarded: number
+  creditsAwarded: number
   cashAwarded: number
   status: string
   triggerEvent: string
@@ -351,7 +351,7 @@ export default function AdminReferralsPage() {
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Coins className="h-4 w-4 text-yellow-500" />
-                          {referral.totalTokensEarned}
+                          {referral.totalCreditsEarned}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -428,7 +428,7 @@ export default function AdminReferralsPage() {
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Coins className="h-4 w-4 text-yellow-500" />
-                          {reward.tokensAwarded}
+                          {reward.creditsAwarded}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

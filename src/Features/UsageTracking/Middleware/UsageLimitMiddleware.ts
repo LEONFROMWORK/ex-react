@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from '@/lib/auth/session'
 import { TrackUsageHandler, TrackUsageValidator } from "../TrackUsage/TrackUsage"
-import { ConsumeTokensHandler, ConsumeTokensValidator } from "@/Features/Billing/TokenManagement/ConsumeTokens"
+import { ConsumeTokensHandler, ConsumeTokensValidator } from "@/Features/Billing/CreditManagement/ConsumeCredits"
 
 interface UsageLimitConfig {
   feature: "excel_analysis" | "ai_chat" | "file_optimization" | "report_generation"
@@ -90,7 +90,7 @@ export class UsageLimitMiddleware {
 
         // Add token info to request headers for downstream use
         const headers = new Headers(req.headers)
-        headers.set("x-tokens-remaining", consumeResult.value.remainingTokens.toString())
+        headers.set("x-credits-remaining", (consumeResult.value.remainingCredits || 0).toString())
         headers.set("x-subscription-plan", consumeResult.value.subscription.plan)
       }
 

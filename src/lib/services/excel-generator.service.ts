@@ -250,7 +250,11 @@ export class ExcelGeneratorService {
     try {
       const aiService = this.getAIService()
       const result = await aiService.generateJSON(aiPrompt)
-      const structure = result
+      const structure = result as any // Type assertion since AI service returns unknown
+      
+      if (!structure?.sheets || !Array.isArray(structure.sheets)) {
+        throw new Error('Invalid structure returned from AI service')
+      }
       
       for (const sheetConfig of structure.sheets) {
         const worksheet = workbook.addWorksheet(sheetConfig.name)
@@ -403,10 +407,7 @@ export class ExcelGeneratorService {
             {
               type: 'dataBar',
               priority: 1,
-              rule: {
-                color: 'FF638EC6',
-                gradient: true
-              }
+              gradient: true
             }
           ]
         })

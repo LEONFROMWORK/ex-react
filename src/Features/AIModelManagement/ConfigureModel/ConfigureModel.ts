@@ -14,6 +14,7 @@ export interface ConfigureModelRequest {
   maxTokens: number
   temperature: number
   costPerToken: number
+  costPerCredit?: number
   taskTypes: string[]
   priority: number
   isDefault?: boolean
@@ -55,8 +56,8 @@ export class ConfigureModelValidator {
       errors.push('Temperature must be between 0 and 2')
     }
 
-    if (request.costPerToken < 0) {
-      errors.push('Cost per token must be non-negative')
+    if (request.costPerCredit && request.costPerCredit < 0) {
+      errors.push('Cost per credit must be non-negative')
     }
 
     // Provider-specific validation
@@ -164,7 +165,7 @@ export class ConfigureModelHandler {
             displayName: request.displayName,
             maxTokens: request.maxTokens,
             temperature: request.temperature,
-            costPerToken: request.costPerToken,
+            costPerCredit: request.costPerCredit || existingModel.costPerCredit || 0,
             taskTypes: request.taskTypes,
             priority: request.priority,
             isDefault: request.isDefault ?? existingModel.isDefault,
@@ -183,7 +184,7 @@ export class ConfigureModelHandler {
             displayName: request.displayName,
             maxTokens: request.maxTokens,
             temperature: request.temperature,
-            costPerToken: request.costPerToken,
+            costPerCredit: request.costPerCredit || 0,
             taskTypes: request.taskTypes,
             priority: request.priority,
             isDefault: request.isDefault ?? false,

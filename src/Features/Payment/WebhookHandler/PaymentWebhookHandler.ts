@@ -173,15 +173,15 @@ export class PaymentWebhookHandler {
     // TODO: Send notification to user about failed payment
   }
 
-  private mapTossStatusToInternal(status: string): string {
-    const statusMap: Record<string, string> = {
+  private mapTossStatusToInternal(status: string): 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED' | 'PARTIALLY_REFUNDED' | 'EXPIRED' {
+    const statusMap: Record<string, 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED' | 'PARTIALLY_REFUNDED' | 'EXPIRED'> = {
       DONE: "COMPLETED",
       CANCELED: "CANCELED",
       PARTIAL_CANCELED: "PARTIALLY_REFUNDED",
       ABORTED: "FAILED",
       EXPIRED: "EXPIRED",
     }
-    return statusMap[status] || status
+    return statusMap[status] || "PENDING"
   }
 
   private async createSubscriptionFromPayment(paymentIntent: any): Promise<void> {
@@ -193,7 +193,7 @@ export class PaymentWebhookHandler {
       validUntil.setFullYear(validUntil.getFullYear() + 1)
     }
 
-    const monthlyTokens = this.getTokensForPlan(paymentIntent.subscriptionPlan)
+    const monthlyCredits = this.getTokensForPlan(paymentIntent.subscriptionPlan)
 
     await prisma.subscription.upsert({
       where: { userId: paymentIntent.userId },
@@ -204,8 +204,8 @@ export class PaymentWebhookHandler {
         currentPeriodStart: new Date(),
         currentPeriodEnd: validUntil,
         validUntil,
-        monthlyTokens,
-        tokensRemaining: monthlyTokens,
+        monthlyCredits,
+        creditsRemaining: monthlyCredits,
       },
       update: {
         plan: paymentIntent.subscriptionPlan,
@@ -213,8 +213,8 @@ export class PaymentWebhookHandler {
         currentPeriodStart: new Date(),
         currentPeriodEnd: validUntil,
         validUntil,
-        monthlyTokens,
-        tokensRemaining: monthlyTokens,
+        monthlyCredits,
+        creditsRemaining: monthlyCredits,
       },
     })
   }

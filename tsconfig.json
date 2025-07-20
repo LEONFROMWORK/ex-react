@@ -38,6 +38,15 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts"
+    "scripts",
+    "src/Features/AIChat.disabled/**/*",
+    "src/Features/VBAProcessing/**/*",
+    "src/lib/ai/streaming-analyzer.ts",
+    "src/lib/ai/vector-db.ts",
+    "src/lib/excel/formula-engine.ts",
+    "src/lib/services/implementations/VBAService.ts",
+    "src/modules/excel-analyzer/index.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

@@ -97,12 +97,14 @@ export class UserTierService {
       })
       
       // 등급 변경 기록
+      const currentTier = await this.getUserTier(userId)
       await prisma.tierHistory.create({
         data: {
           userId,
-          fromTier: await this.getUserTier(userId),
+          fromTier: currentTier,
           toTier: newTier,
-          reason: 'MANUAL_UPGRADE'
+          reason: 'MANUAL_UPGRADE',
+          changedBy: 'SYSTEM'
         }
       })
       
@@ -119,7 +121,6 @@ export class UserTierService {
       where: { id: userId },
       select: { 
         createdAt: true,
-        freeTrialEndsAt: true,
         tier: true
       }
     })
@@ -128,7 +129,7 @@ export class UserTierService {
       return { active: false, daysRemaining: 0 }
     }
     
-    const trialEndDate = user.freeTrialEndsAt || new Date(user.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000) // 7일
+    const trialEndDate = new Date(user.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000) // 7일
     const now = new Date()
     
     if (now > trialEndDate) {

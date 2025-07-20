@@ -124,12 +124,12 @@ export class GetDashboardStatsHandler {
           },
         },
         _sum: {
-          tokensUsed: true,
+          creditsUsed: true,
           hitCount: true,
         },
       });
 
-      const tokensSaved = (cachedAnalyses._sum.hitCount || 0) * (cachedAnalyses._sum.tokensUsed || 0);
+      const tokensSaved = (cachedAnalyses._sum.hitCount || 0) * (cachedAnalyses._sum.creditsUsed || 0);
       const aiCostOptimization = tokensSaved * 0.00003; // Approximate cost per token
 
       // Get summary stats

@@ -32,9 +32,9 @@ export class FineTuningLogger {
           userQuery: data.userQuery,
           systemPrompt: data.systemPrompt,
           aiResponse: data.aiResponse,
-          functionCalls: data.functionCalls || undefined,
+          functionCalls: JSON.stringify(data.functionCalls) || null,
           responseTime: data.responseTime,
-          tokenCount: data.tokenCount,
+          creditCount: data.tokenCount, // 호환성을 위해 tokenCount를 creditCount로 매핑
           modelUsed: data.modelUsed || process.env.DEFAULT_AI_MODEL || 'gpt-4',
           excelContext: data.excelContext || undefined,
           taskType: data.taskType,
@@ -124,10 +124,10 @@ export class FineTuningLogger {
       score += 0.05
     }
     
-    // 5. 토큰 효율성 (0.1)
-    if (data.tokenCount < 1000) {
+    // 5. 크레딧 효율성 (0.1)
+    if (data.tokenCount < 10) {
       score += 0.1
-    } else if (data.tokenCount < 2000) {
+    } else if (data.tokenCount < 20) {
       score += 0.05
     }
     

@@ -36,13 +36,13 @@ export interface UserListItem {
   role: string;
   tier?: string;
   emailVerified: Date | null;
-  tokens: number;
+  credits: number;
   aiPreference: string;
   createdAt: Date;
   subscription?: {
     plan: string;
     status: string;
-    tokensRemaining: number;
+    creditsRemaining: number;
   };
   _count: {
     files: number;
@@ -107,14 +107,14 @@ export class GetUsersHandler {
           role: true,
           tier: true,
           emailVerified: true,
-          tokens: true,
+          credits: true,
           aiPreference: true,
           createdAt: true,
           subscription: {
             select: {
               plan: true,
               status: true,
-              tokensRemaining: true,
+              creditsRemaining: true,
             },
           },
           _count: {

@@ -19,7 +19,7 @@ async function main() {
       name: 'Test User',
       role: 'USER',
       referralCode: 'TEST123',
-      tokens: 1000,
+      credits: 1000,
       emailVerified: new Date(),
     }
   })
@@ -34,7 +34,7 @@ async function main() {
       name: 'Admin User',
       role: 'ADMIN',
       referralCode: 'ADMIN123',
-      tokens: 10000,
+      credits: 10000,
       emailVerified: new Date(),
     }
   })
@@ -55,7 +55,7 @@ async function main() {
       isDefault: true,
       maxTokens: 2000,
       temperature: 0.7,
-      costPerToken: 0.0001,
+      costPerCredit: 0.0001,
       taskTypes: ['CREATE', 'CORRECT', 'ANALYZE'],
       complexity: ['simple', 'complex'],
       priority: 100,

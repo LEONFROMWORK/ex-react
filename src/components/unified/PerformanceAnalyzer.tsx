@@ -93,7 +93,7 @@ export function PerformanceAnalyzer({ results }: PerformanceAnalyzerProps) {
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <span className="text-sm font-medium">휘발성 함수</span>
             </div>
-            <Badge variant="warning">{metrics.volatileFunctions}개 발견</Badge>
+            <Badge variant="destructive">{metrics.volatileFunctions}개 발견</Badge>
           </div>
         </CardContent>
       </Card>

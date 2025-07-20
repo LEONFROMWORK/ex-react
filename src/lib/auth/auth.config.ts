@@ -50,7 +50,7 @@ export const authConfig = {
           id: user.id,
           email: user.email,
           name: user.name,
-          tokens: user.tokens,
+          credits: user.credits,
           role: user.role,
           tier: user.tier || 'FREE'
         }

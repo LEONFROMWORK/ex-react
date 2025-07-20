@@ -79,6 +79,7 @@ export interface VBAModule {
   name: string
   type: 'standard' | 'class' | 'form'
   code: string
+  errors: VBAError[]
   lineCount: number
 }
 
@@ -86,8 +87,12 @@ export interface VBAError {
   id: string
   module: string
   line: number
+  column?: number
+  severity: 'critical' | 'high' | 'medium' | 'low'
   type: string
-  message: string
+  message?: string
+  description: string
+  recommendation: string
   suggestion?: string
 }
 
@@ -96,6 +101,14 @@ export interface SecurityIssue {
   type: string
   description: string
   recommendation: string
+}
+
+export interface VBAFixResult {
+  success: boolean
+  fixedErrors: VBAError[]
+  failedErrors: VBAError[]
+  modifiedModules: VBAModule[]
+  newCode: string
 }
 
 export interface GeneratedFile {

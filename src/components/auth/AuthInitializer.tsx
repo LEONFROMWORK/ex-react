@@ -6,13 +6,13 @@ import { useUserStore } from '@/lib/stores/userStore'
 
 export function AuthInitializer() {
   const { data: session } = useSession()
-  const setTokens = useUserStore((state) => state.setTokens)
+  const setCredits = useUserStore((state) => state.setCredits)
   
   useEffect(() => {
     if (session?.user?.tokens !== undefined) {
-      setTokens(session.user.tokens)
+      setCredits(session.user.tokens)
     }
-  }, [session, setTokens])
+  }, [session, setCredits])
   
   return null
 }

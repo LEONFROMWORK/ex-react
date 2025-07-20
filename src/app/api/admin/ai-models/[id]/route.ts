@@ -43,7 +43,7 @@ export async function PUT(
         priority: data.priority,
         maxTokens: data.maxTokens,
         temperature: data.temperature,
-        costPerToken: data.costPerToken,
+        costPerCredit: data.costPerCredit,
         taskTypes: data.taskTypes,
         complexity: data.complexity,
       }

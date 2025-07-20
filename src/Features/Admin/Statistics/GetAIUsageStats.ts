@@ -102,7 +102,7 @@ export class GetAIUsageStatsHandler {
         },
         _sum: {
           hitCount: true,
-          tokensUsed: true,
+          creditsUsed: true,
         },
         _count: true,
       });
@@ -159,7 +159,7 @@ export class GetAIUsageStatsHandler {
           tier2Requests,
           totalTokens,
           totalCost,
-          savedTokens: cacheData._sum.tokensUsed || 0,
+          savedTokens: cacheData._sum.creditsUsed || 0,
           savedCost: totalCost * cacheHitRate, // Estimated savings from cache
           cacheHitRate,
         },

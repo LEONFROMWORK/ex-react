@@ -29,7 +29,7 @@ interface DashboardNavProps {
 
 export function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname()
-  const tokens = useUserStore((state) => state.tokens)
+  const credits = useUserStore((state) => state.credits)
   
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" })
@@ -110,8 +110,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <Link href="/pricing" className="flex items-center space-x-2">
               <Badge variant="secondary" className="px-3 py-1">
                 <Coins className="h-4 w-4 mr-1" />
-                <span className="font-semibold">{tokens}</span>
-                <span className="text-xs ml-1">토큰</span>
+                <span className="font-semibold">{credits}</span>
+                <span className="text-xs ml-1">크레딧</span>
               </Badge>
             </Link>
             

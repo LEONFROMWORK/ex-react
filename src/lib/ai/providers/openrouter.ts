@@ -117,11 +117,84 @@ export class OpenRouterProvider extends AIProvider {
     }
   }
 
+  /**
+   * Vision 모델을 위한 응답 생성
+   */
+  async generateVisionResponse(
+    model: string,
+    messages: any[],
+    options: {
+      temperature?: number
+      maxTokens?: number
+      systemPrompt?: string
+    } = {}
+  ): Promise<AIResponse> {
+    const startTime = Date.now()
+    
+    try {
+      // 시스템 프롬프트 추가
+      const fullMessages = options.systemPrompt 
+        ? [{ role: 'system', content: options.systemPrompt }, ...messages]
+        : messages
+
+      const response = await fetch(`${this.endpoint}/api/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://exhell.app',
+          'X-Title': 'Exhell Excel Vision Analysis',
+        },
+        body: JSON.stringify({
+          model,
+          messages: fullMessages,
+          temperature: options.temperature ?? 0.3,
+          max_tokens: options.maxTokens ?? 1500,
+          top_p: 1,
+          frequency_penalty: 0,
+          presence_penalty: 0
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`OpenRouter Vision API error: ${response.status} - ${error}`)
+      }
+
+      const data: OpenRouterResponse = await response.json()
+      const latency = Date.now() - startTime
+      
+      return {
+        content: data.choices[0]?.message?.content || '',
+        model: data.model,
+        usage: {
+          promptTokens: data.usage?.prompt_tokens || 0,
+          completionTokens: data.usage?.completion_tokens || 0,
+          totalTokens: data.usage?.total_tokens || 0
+        },
+        provider: 'openrouter',
+        latency,
+        cost: this.estimateCost(data.usage.prompt_tokens, data.usage.completion_tokens)
+      }
+    } catch (error) {
+      throw new AIProviderError(
+        `OpenRouter Vision API error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        this.name,
+        error
+      )
+    }
+  }
+
   estimateCost(inputTokens: number, outputTokens: number): number {
     // OpenRouter pricing varies by model
     // These are approximate costs per 1K tokens
     const modelPricing: Record<string, { input: number; output: number }> = {
-      // LLAMA models
+      // 3-Tier AI System Models (최신 설정)
+      'mistralai/mistral-small-3.1': { input: 0.00015, output: 0.00015 }, // Tier 1: $0.15/1M
+      'meta-llama/llama-4-maverick': { input: 0.00039, output: 0.00039 }, // Tier 2: $0.39/1M  
+      'openai/gpt-4.1-mini': { input: 0.0004, output: 0.0016 }, // Tier 3: $0.40/$1.60/1M
+      
+      // LLAMA models (legacy)
       'meta-llama/llama-2-70b-chat': { input: 0.0007, output: 0.0009 },
       'meta-llama/llama-2-13b-chat': { input: 0.0002, output: 0.0002 },
       'meta-llama/llama-2-7b-chat': { input: 0.00007, output: 0.00007 },

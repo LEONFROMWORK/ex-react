@@ -182,12 +182,15 @@ export class ApplyCorrectionHandler {
         data: {
           fileId: request.fileId,
           userId: request.userId,
-          corrections: {
+          analysisId: "temp-analysis-id", // 분석 ID가 필요함
+          corrections: JSON.stringify({
             applied: appliedCorrections,
             failed: failedCorrections,
-          },
+          }),
           correctedFileUrl: `/uploads/${correctedFileName}`,
           status: failedCorrections.length === 0 ? "COMPLETED" : "PARTIAL",
+          creditsUsed: 5,
+          creditsCharged: 5,
         },
       });
 

@@ -90,7 +90,7 @@ export const createAuthRateLimit = () => new RateLimitMiddleware({
   windowMs: 900000, // 15 minutes
   maxRequests: 5,
   keyGenerator: (req) => {
-    const body = req.body
+    const body = req.body as any
     const email = body?.email || "unknown"
     return `auth-limit:${email}`
   },

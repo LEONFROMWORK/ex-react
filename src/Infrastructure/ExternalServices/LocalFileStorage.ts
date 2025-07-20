@@ -108,6 +108,18 @@ export class LocalFileStorage implements IFileStorage, IFileStorageFromUpload {
 export class AzureBlobStorage implements IFileStorage {
   constructor(private connectionString: string, private containerName: string) {}
 
+  async save(file: Buffer, key: string): Promise<string> {
+    throw new Error("Azure Blob Storage not implemented yet");
+  }
+
+  async get(key: string): Promise<Buffer> {
+    throw new Error("Azure Blob Storage not implemented yet");
+  }
+
+  async delete(key: string): Promise<void> {
+    throw new Error("Azure Blob Storage not implemented yet");
+  }
+
   async uploadAsync(
     file: File,
     fileName: string
@@ -121,6 +133,18 @@ export class AzureBlobStorage implements IFileStorage {
 // Future implementation for AWS S3
 export class S3Storage implements IFileStorage {
   constructor(private bucketName: string, private region: string) {}
+
+  async save(file: Buffer, key: string): Promise<string> {
+    throw new Error("S3 Storage not implemented yet");
+  }
+
+  async get(key: string): Promise<Buffer> {
+    throw new Error("S3 Storage not implemented yet");
+  }
+
+  async delete(key: string): Promise<void> {
+    throw new Error("S3 Storage not implemented yet");
+  }
 
   async uploadAsync(
     file: File,

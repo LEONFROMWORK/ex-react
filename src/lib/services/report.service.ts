@@ -129,7 +129,7 @@ export class ReportService {
     
     data.analysisResults.forEach((item, index) => {
       detailsData.push([
-        index + 1,
+        (index + 1).toString(),
         item.severity,
         item.type,
         `${item.location.sheet}!${item.location.cell || item.location.range || ''}`,
@@ -198,16 +198,16 @@ export class ReportService {
     
     const errorTypes = new Set(analysisResults.map(r => r.type))
     
-    if (errorTypes.has('circular-reference')) {
-      recommendations.push('순환 참조를 제거하여 계산 성능을 개선하세요.')
+    if (errorTypes.has('error')) {
+      recommendations.push('오류를 수정하여 파일의 정상적인 작동을 보장하세요.')
     }
     
-    if (errorTypes.has('performance')) {
-      recommendations.push('VLOOKUP 대신 INDEX/MATCH 사용을 고려하여 성능을 향상시키세요.')
+    if (errorTypes.has('optimization')) {
+      recommendations.push('최적화 제안사항을 적용하여 성능을 향상시키세요.')
     }
     
-    if (errorTypes.has('vba')) {
-      recommendations.push('VBA 코드를 최신 버전으로 업데이트하고 오류 처리를 추가하세요.')
+    if (errorTypes.has('warning')) {
+      recommendations.push('경고사항을 검토하고 필요시 수정하세요.')
     }
     
     if (summary.autoFixable > summary.totalIssues * 0.5) {

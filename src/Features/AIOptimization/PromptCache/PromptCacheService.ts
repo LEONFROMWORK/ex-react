@@ -61,7 +61,7 @@ export class PromptCacheService {
         const response: CachedPromptResponse = {
           response: cachedInDb.response,
           confidence: cachedInDb.confidence,
-          tokensUsed: cachedInDb.tokensUsed,
+          tokensUsed: cachedInDb.creditsUsed,
           model: cachedInDb.model,
           fromCache: true,
         }
@@ -124,14 +124,14 @@ export class PromptCacheService {
       _count: true,
       _sum: {
         hitCount: true,
-        tokensUsed: true,
+        creditsUsed: true,
       },
     })
 
     const totalHits = stats._sum.hitCount || 0
     const totalCached = stats._count
     const hitRate = totalCached > 0 ? totalHits / totalCached : 0
-    const tokensSaved = (stats._sum.tokensUsed || 0) * totalHits
+    const tokensSaved = (stats._sum.creditsUsed || 0) * totalHits
     
     // Calculate cost saved based on model
     const avgCostPerToken = 0.002 // Average between Tier 1 and Tier 2
@@ -182,14 +182,14 @@ export class PromptCacheService {
         model,
         response,
         confidence,
-        tokensUsed,
+        creditsUsed: tokensUsed,
         expiresAt,
         hitCount: 0,
       },
       update: {
         response,
         confidence,
-        tokensUsed,
+        creditsUsed: tokensUsed,
         expiresAt,
         model,
       },

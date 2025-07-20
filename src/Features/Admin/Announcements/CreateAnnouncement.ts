@@ -65,10 +65,10 @@ export class CreateAnnouncementHandler {
           action: "ANNOUNCEMENT_CREATED",
           targetType: "announcement",
           targetId: announcement.id,
-          metadata: {
+          metadata: JSON.stringify({
             title: announcement.title,
             type: announcement.type,
-          },
+          }),
         },
       });
 

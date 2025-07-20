@@ -37,7 +37,7 @@ export class DownloadCorrectedFileValidator {
           message: error.errors.map(e => e.message).join(", "),
         })
       }
-      return Result.failure(ExcelErrors.InvalidRequest)
+      return Result.failure(ExcelErrors.InvalidFormat)
     }
   }
 }
@@ -65,7 +65,7 @@ export class DownloadCorrectedFileHandler {
       })
 
       if (!file || !file.analyses[0]) {
-        return Result.failure(ExcelErrors.FileNotFound)
+        return Result.failure(ExcelErrors.NotFound)
       }
 
       const analysis = file.analyses[0]

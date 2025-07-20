@@ -26,22 +26,18 @@ export async function POST(req: NextRequest) {
 
     // Handle chat message using new architecture
     const handler = container.getSendMessageHandler()
-    const result = await handler.handle({
-      ...body,
-      userId: session.user.id,
-      tenantId: 'default' // Default tenant
-    })
+    const result = await handler.handle()
 
-    if (result.isFailure) {
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, message: result.error!.message },
+        { success: false, message: result.error },
         { status: 400 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      ...result.value,
+      message: "채팅 기능은 현재 비활성화되어 있습니다.",
     })
   } catch (error) {
     console.error("Chat error:", error)

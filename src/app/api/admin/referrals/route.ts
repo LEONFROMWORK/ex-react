@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         }
       },
       orderBy: {
-        totalTokensEarned: 'desc'
+        totalCreditsEarned: 'desc'
       }
     })
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       userEmail: referral.user.email,
       referralCode: referral.referralCode,
       referralCount: referral.referralCount,
-      totalTokensEarned: referral.totalTokensEarned,
+      totalCreditsEarned: referral.totalCreditsEarned,
       totalEarned: referral.totalEarned,
       rewardType: referral.rewardType,
       createdAt: referral.createdAt

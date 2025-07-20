@@ -253,7 +253,7 @@ async function saveToCache(key: string, result: AIAnalysisResult) {
       model: result.tier === "TIER1" ? "gpt-3.5-turbo" : "gpt-4",
       response: result as any,
       confidence: result.confidence,
-      tokensUsed: result.tokensUsed,
+      creditsUsed: (result as any).creditsUsed || (result as any).tokensUsed || 0,
       expiresAt: new Date(Date.now() + 3600 * 1000), // 1 hour
     },
   }).catch(() => {}) // Ignore duplicate key errors

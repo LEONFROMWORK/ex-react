@@ -35,6 +35,7 @@ export interface ModelUsageStats {
   totalTokens: number
   totalCost: number
   averageLatency: number
+  latencySum?: number
 }
 
 export interface GetUsageStatsResponse {
@@ -58,8 +59,7 @@ export class UsageMonitor {
           latency: request.response.latency,
           success: true,
           taskType: request.taskType,
-          errorMessage: request.note,
-          tenantId: request.tenantId
+          errorMessage: request.note
         }
       })
 
@@ -95,8 +95,7 @@ export class UsageMonitor {
           latency: 0,
           success: false,
           taskType: request.taskType,
-          errorMessage: request.errorMessage,
-          tenantId: request.tenantId
+          errorMessage: request.errorMessage
         }
       })
 

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         isActive: true,
         isDefault: true,
         maxTokens: true,
-        costPerToken: true,
+        costPerCredit: true,
       }
     })
 

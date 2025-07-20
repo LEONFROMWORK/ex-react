@@ -26,7 +26,7 @@ const plans = [
     yearlyPrice: "₩0",
     description: TIER_PRICING[USER_TIERS.FREE].description,
     features: [
-      "회원가입 보너스 50 토큰",
+      "회원가입 보너스 50 크레딧",
       "기본 Excel 오류 검사",
       `파일당 최대 ${TIER_LIMITS[USER_TIERS.FREE].maxFileSize / 1024 / 1024}MB`,
       `월 ${TIER_LIMITS[USER_TIERS.FREE].maxFilesPerMonth}개 파일 처리`,
@@ -47,7 +47,7 @@ const plans = [
     yearlyPrice: `₩${(TIER_PRICING[USER_TIERS.BASIC].yearly! / 12).toLocaleString()}`,
     description: TIER_PRICING[USER_TIERS.BASIC].description,
     features: [
-      `월 ${TIER_LIMITS[USER_TIERS.BASIC].monthlyTokens} 토큰`,
+      `월 ${TIER_LIMITS[USER_TIERS.BASIC].monthlyTokens} 크레딧`,
       "고급 오류 검사 및 자동 수정",
       "성능 최적화 제안",
       `파일당 최대 ${TIER_LIMITS[USER_TIERS.BASIC].maxFileSize / 1024 / 1024}MB`,
@@ -69,7 +69,7 @@ const plans = [
     yearlyPrice: `₩${(TIER_PRICING[USER_TIERS.PRO].yearly! / 12).toLocaleString()}`,
     description: TIER_PRICING[USER_TIERS.PRO].description,
     features: [
-      `월 ${TIER_LIMITS[USER_TIERS.PRO].monthlyTokens} 토큰`,
+      `월 ${TIER_LIMITS[USER_TIERS.PRO].monthlyTokens} 크레딧`,
       "모든 분석 기능",
       "VBA 코드 분석 및 최적화",
       `파일당 최대 ${TIER_LIMITS[USER_TIERS.PRO].maxFileSize / 1024 / 1024}MB`,
@@ -80,7 +80,7 @@ const plans = [
     ],
     notIncluded: [
       "팀 협업 기능",
-      "무제한 토큰",
+      "무제한 크레딧",
       "전담 지원",
     ],
     popular: true,
@@ -92,7 +92,7 @@ const plans = [
     yearlyPrice: "문의",
     description: TIER_PRICING[USER_TIERS.ENTERPRISE].description,
     features: [
-      "무제한 토큰",
+      "무제한 크레딧",
       "모든 기능 무제한",
       `파일당 최대 ${TIER_LIMITS[USER_TIERS.ENTERPRISE].maxFileSize / 1024 / 1024}MB`,
       "무제한 파일 처리",
@@ -290,12 +290,12 @@ export default function PricingPage() {
           <div className="max-w-2xl mx-auto space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">토큰은 어떻게 사용되나요?</CardTitle>
+                <CardTitle className="text-lg">크레딧은 어떻게 사용되나요?</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 dark:text-gray-400">
-                  1개의 토큰으로 약 1,000개의 셀을 처리할 수 있습니다. 
-                  파일의 크기와 복잡도에 따라 소비되는 토큰이 달라질 수 있습니다.
+                  1개의 크레딧으로 약 1,000개의 셀을 처리할 수 있습니다. 
+                  파일의 크기와 복잡도에 따라 소비되는 크레딧이 달라질 수 있습니다.
                 </p>
               </CardContent>
             </Card>
@@ -317,7 +317,7 @@ export default function PricingPage() {
               <CardContent>
                 <p className="text-gray-600 dark:text-gray-400">
                   첫 구독 후 7일 이내에 환불을 요청하실 수 있습니다. 
-                  사용한 토큰에 대한 금액은 제외됩니다.
+                  사용한 크레딧에 대한 금액은 제외됩니다.
                 </p>
               </CardContent>
             </Card>

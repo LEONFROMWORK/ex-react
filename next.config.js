@@ -18,6 +18,43 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  // Image optimization
+  images: {
+    domains: ['localhost'],
+    formats: ['image/webp', 'image/avif'],
+  },
+  // 성능 최적화
+  compress: true,
+  // SEO 최적화
+  trailingSlash: false,
+  generateEtags: true,
+  poweredByHeader: false,
+  // 보안 헤더
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+    ]
+  },
   // Set build-time environment variable
   env: {
     BUILDING: 'true',

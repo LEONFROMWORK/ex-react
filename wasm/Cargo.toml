@@ -1,0 +1,40 @@
+[package]
+name = "excel-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+
+# Excel processing dependencies (Apache 2.0 / MIT 라이선스)
+calamine = "0.24"              # Excel 읽기 (Apache 2.0)
+rust_xlsxwriter = "0.68"       # Excel 쓰기 (MIT)
+
+# 성능 최적화
+rayon = "1.8"                  # 병렬 처리
+ahash = "0.8"                  # 빠른 해싱
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "console",
+  "Performance",
+  "File",
+  "Blob",
+  "ArrayBuffer",
+]
+
+# WASM 최적화 설정
+[profile.release]
+lto = true
+opt-level = "s"
+codegen-units = 1
+panic = "abort"

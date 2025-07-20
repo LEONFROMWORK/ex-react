@@ -2,18 +2,18 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
 interface UserState {
-  tokens: number
-  tokenHistory: TokenTransaction[]
+  credits: number
+  creditHistory: CreditTransaction[]
   
   // Actions
-  setTokens: (tokens: number) => void
-  addTokens: (amount: number, reason: string) => void
-  useTokens: (amount: number, reason: string) => Promise<boolean>
-  addTokenTransaction: (transaction: TokenTransaction) => void
-  clearTokenHistory: () => void
+  setCredits: (credits: number) => void
+  addCredits: (amount: number, reason: string) => void
+  useCredits: (amount: number, reason: string) => Promise<boolean>
+  addCreditTransaction: (transaction: CreditTransaction) => void
+  clearCreditHistory: () => void
 }
 
-export interface TokenTransaction {
+export interface CreditTransaction {
   id: string
   amount: number
   type: 'credit' | 'debit'
@@ -26,18 +26,18 @@ export const useUserStore = create<UserState>()(
   devtools(
     persist(
       (set, get) => ({
-        tokens: 0,
-        tokenHistory: [],
+        credits: 0,
+        creditHistory: [],
         
-        setTokens: (tokens) => {
-          set({ tokens })
+        setCredits: (credits) => {
+          set({ credits })
         },
         
-        addTokens: (amount, reason) => {
-          const currentTokens = get().tokens
-          const newBalance = currentTokens + amount
+        addCredits: (amount, reason) => {
+          const currentCredits = get().credits
+          const newBalance = currentCredits + amount
           
-          const transaction: TokenTransaction = {
+          const transaction: CreditTransaction = {
             id: `txn-${Date.now()}`,
             amount,
             type: 'credit',
@@ -47,21 +47,21 @@ export const useUserStore = create<UserState>()(
           }
           
           set((state) => ({
-            tokens: newBalance,
-            tokenHistory: [transaction, ...state.tokenHistory]
+            credits: newBalance,
+            creditHistory: [transaction, ...state.creditHistory]
           }))
         },
         
-        useTokens: async (amount, reason) => {
-          const currentTokens = get().tokens
+        useCredits: async (amount, reason) => {
+          const currentCredits = get().credits
           
-          if (currentTokens < amount) {
+          if (currentCredits < amount) {
             return false
           }
           
-          const newBalance = currentTokens - amount
+          const newBalance = currentCredits - amount
           
-          const transaction: TokenTransaction = {
+          const transaction: CreditTransaction = {
             id: `txn-${Date.now()}`,
             amount,
             type: 'debit',
@@ -71,28 +71,28 @@ export const useUserStore = create<UserState>()(
           }
           
           set((state) => ({
-            tokens: newBalance,
-            tokenHistory: [transaction, ...state.tokenHistory]
+            credits: newBalance,
+            creditHistory: [transaction, ...state.creditHistory]
           }))
           
           return true
         },
         
-        addTokenTransaction: (transaction) => {
+        addCreditTransaction: (transaction) => {
           set((state) => ({
-            tokenHistory: [transaction, ...state.tokenHistory]
+            creditHistory: [transaction, ...state.creditHistory]
           }))
         },
         
-        clearTokenHistory: () => {
-          set({ tokenHistory: [] })
+        clearCreditHistory: () => {
+          set({ creditHistory: [] })
         }
       }),
       {
         name: 'user-storage',
         partialize: (state) => ({ 
-          tokens: state.tokens,
-          tokenHistory: state.tokenHistory 
+          credits: state.credits,
+          creditHistory: state.creditHistory 
         })
       }
     ),

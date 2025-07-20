@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { Result } from "@/Common/Result"
 import { prisma } from "@/lib/prisma"
-import { ConsumeTokensHandler } from "@/Features/Billing/TokenManagement/ConsumeTokens"
+import { ConsumeTokensHandler } from "@/Features/Billing/CreditManagement/ConsumeCredits"
 import { ProcessReferralRewardHandler } from "@/Features/Referral/ProcessReferralReward"
 
 // Request/Response types
@@ -125,7 +125,7 @@ export class ConfirmPaymentHandler {
           userId: paymentIntent.userId,
           type: "PURCHASE",
           amount: paymentIntent.amount,
-          tokens: this.getTokensForPlan(paymentIntent.subscriptionPlan),
+          credits: this.getCreditsForPlan(paymentIntent.subscriptionPlan),
           description: `${paymentIntent.subscriptionPlan} ${paymentIntent.billingPeriod} 구독`,
           status: "COMPLETED",
           paymentKey: request.paymentKey,
@@ -164,7 +164,7 @@ export class ConfirmPaymentHandler {
       validUntil.setFullYear(validUntil.getFullYear() + 1)
     }
 
-    const monthlyTokens = this.getTokensForPlan(paymentIntent.subscriptionPlan)
+    const monthlyCredits = this.getCreditsForPlan(paymentIntent.subscriptionPlan)
 
     await prisma.subscription.upsert({
       where: { userId: paymentIntent.userId },
@@ -175,8 +175,8 @@ export class ConfirmPaymentHandler {
         currentPeriodStart: new Date(),
         currentPeriodEnd: validUntil,
         validUntil,
-        monthlyTokens,
-        tokensRemaining: monthlyTokens,
+        monthlyCredits,
+        creditsRemaining: monthlyCredits,
       },
       update: {
         plan: paymentIntent.subscriptionPlan,
@@ -184,26 +184,26 @@ export class ConfirmPaymentHandler {
         currentPeriodStart: new Date(),
         currentPeriodEnd: validUntil,
         validUntil,
-        monthlyTokens,
-        tokensRemaining: monthlyTokens,
+        monthlyCredits,
+        creditsRemaining: monthlyCredits,
       },
     })
   }
 
   private async allocateTokens(paymentIntent: any): Promise<void> {
-    const tokens = this.getTokensForPlan(paymentIntent.subscriptionPlan)
+    const tokens = this.getCreditsForPlan(paymentIntent.subscriptionPlan)
     
     await prisma.subscription.update({
       where: { userId: paymentIntent.userId },
       data: {
-        tokensRemaining: {
+        creditsRemaining: {
           increment: tokens,
         },
       },
     })
   }
 
-  private getTokensForPlan(plan: string): number {
+  private getCreditsForPlan(plan: string): number {
     const tokenMap = {
       BASIC: 1000,
       PREMIUM: 3000,

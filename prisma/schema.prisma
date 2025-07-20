@@ -3,12 +3,15 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [vector]
 }
+
 
 model User {
   id              String    @id @default(cuid())
@@ -21,7 +24,7 @@ model User {
   role            Role      @default(USER)
   tier            String?   @default("FREE")
   tierUpdatedAt   DateTime?
-  tokens          Int       @default(100)
+  credits         Int       @default(100)
   referralCode    String    @unique
   referredBy      String?
   aiPreference    AITier    @default(ECONOMY)
@@ -47,18 +50,27 @@ model User {
   referralLogs    ReferralLog[]  @relation("UserReferrals")
   paymentIntents  PaymentIntent[]
   usageLogs       UsageLog[]
+  userFeedbacks   UserFeedback[]
   aiUsageStats    AIUsageStats?
   errorPatterns   ErrorPattern[]
   errorFailures   ErrorResolutionFailure[]
   fineTuningData  FineTuningData[]
   tierHistory     TierHistory[]
-  tokenTransactions TokenTransaction[]
+  creditTransactions CreditTransaction[]
   auditLogs       AuditLog[] @relation("AuditLogUser")
   adminLogs       AdminLog[] @relation("AdminLogUser")
   payments        Payment[]
   feedbacks       Feedback[]
   feedbackResponses Feedback[] @relation("FeedbackResponder")
   fileVersions    FileVersion[] @relation("FileVersionCreator")
+  experimentAssignments ExperimentAssignment[]
+  userModelHistory UserModelHistory?
+  routingDecisions RoutingDecision[]
+  aiUsageLogs     AIUsageLog[]
+  knowledgeUsageLogs KnowledgeUsageLog[] @relation("KnowledgeUsageLogs")
+  knowledgeFeedbacks KnowledgeFeedback[] @relation("KnowledgeFeedbacks")
+  userStats       UserStats?
+  analysisHistories AnalysisHistory[]
 }
 
 model Profile {
@@ -110,7 +122,7 @@ model Analysis {
   // AI 분석 정보
   aiTier          AITier    @default(TIER1)
   confidence      Float?
-  tokensUsed      Int
+  creditsUsed     Int
   promptTokens    Int
   completionTokens Int
   estimatedCost   Float
@@ -140,7 +152,7 @@ model ChatMessage {
   conversationId  String
   role            String    // "user" | "assistant" | "system"
   content         String
-  tokensUsed      Int?
+  creditsUsed     Int?
   aiTier          String?   // "TIER1" | "TIER2"
   modelUsed       String?   // Model name (e.g., "gpt-4", "claude-3")
   attachments     String?
@@ -177,7 +189,7 @@ model Transaction {
   userId          String
   type            TransactionType
   amount          Float
-  tokens          Int?
+  credits         Int?
   description     String
   status          TransactionStatus @default(PENDING)
   paymentKey      String?
@@ -192,8 +204,8 @@ model Subscription {
   userId          String    @unique
   plan            SubscriptionPlan @default(FREE)
   status          SubscriptionStatus @default(ACTIVE)
-  tokensRemaining Int       @default(100)
-  monthlyTokens   Int       @default(100)
+  creditsRemaining Int       @default(100)
+  monthlyCredits  Int       @default(100)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   validUntil      DateTime?
@@ -210,11 +222,11 @@ model Referral {
   referralLink    String    @unique  // 고유 추천 링크
   referralCount   Int       @default(0)
   totalEarned     Float     @default(0)
-  totalTokensEarned Int     @default(0)
+  totalCreditsEarned Int     @default(0)
   
   // 추천 보상 설정
   rewardType      String    @default("PAYMENT_BASED") // PAYMENT_BASED, SIGNUP_BASED
-  tokenRewardAmount Int     @default(100) // 추천 보상 토큰 수
+  creditRewardAmount Int     @default(100) // 추천 보상 크레딧 수
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -240,14 +252,14 @@ model AIUsageStats {
   userId          String    @unique
   
   tier1Calls      Int       @default(0)
-  tier1Tokens     Int       @default(0)
+  tier1Credits    Int       @default(0)
   tier1Cost       Float     @default(0)
   
   tier2Calls      Int       @default(0)
-  tier2Tokens     Int       @default(0)
+  tier2Credits    Int       @default(0)
   tier2Cost       Float     @default(0)
   
-  tokensSaved     Int       @default(0)
+  creditsSaved    Int       @default(0)
   costSaved       Float     @default(0)
   
   lastUpdated     DateTime  @updatedAt
@@ -265,8 +277,8 @@ model Correction {
   correctedFileUrl String?  // URL of corrected file
   
   status          CorrectionStatus @default(PENDING)
-  tokensUsed      Int       @default(0)
-  tokensCharged   Int       @default(0) // Actual tokens charged (may be less due to partial success)
+  creditsUsed     Int       @default(0)
+  creditsCharged  Int       @default(0) // Actual credits charged (may be less due to partial success)
   
   aiModel         String?
   confidence      Float?
@@ -289,7 +301,7 @@ model AIPromptCache {
   model           String
   response        String
   confidence      Float
-  tokensUsed      Int
+  creditsUsed     Int
   createdAt       DateTime  @default(now())
   expiresAt       DateTime
   hitCount        Int       @default(0)
@@ -322,6 +334,148 @@ model UsageLog {
   createdAt       DateTime  @default(now())
   
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserFeedback {
+  id              String    @id @default(cuid())
+  analysisId      String
+  userId          String
+  modelUsed       String
+  helpful         Boolean
+  accuracyScore   Int       // 1-5
+  responseTime    Int       // milliseconds
+  cost            Float
+  feedbackText    String?
+  errorReported   Boolean   @default(false)
+  timestamp       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([modelUsed])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model ModelPerformance {
+  model           String    @id
+  totalFeedbacks  Int       @default(0)
+  avgAccuracyScore Float    @default(0)
+  avgResponseTime Float     @default(0)
+  avgCost         Float     @default(0)
+  successRate     Float     @default(0)
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([avgAccuracyScore])
+}
+
+model Experiment {
+  id              String    @id @default(cuid())
+  name            String
+  description     String
+  status          String    // draft, active, paused, completed
+  type            String    // model, prompt, parameter, feature
+  variants        String    // JSON string of variants
+  targetAudience  String?   // JSON string of targeting rules
+  metrics         String[]
+  startDate       DateTime
+  endDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  assignments     ExperimentAssignment[]
+  results         ExperimentResult[]
+  
+  @@index([status])
+  @@index([type])
+}
+
+model ExperimentAssignment {
+  id              String    @id @default(cuid())
+  experimentId    String
+  variantId       String
+  userId          String
+  assignedAt      DateTime  @default(now())
+  
+  experiment      Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([experimentId, userId])
+  @@index([userId])
+}
+
+model ExperimentResult {
+  id              String    @id @default(cuid())
+  experimentId    String
+  variantId       String
+  userId          String
+  sessionId       String
+  metrics         String    // JSON string of metrics
+  timestamp       DateTime  @default(now())
+  
+  experiment      Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  
+  @@index([experimentId, variantId])
+  @@index([timestamp])
+}
+
+model PromptTemplate {
+  id              String    @id @default(cuid())
+  name            String
+  category        String
+  language        String    @default("ko")
+  template        String    @db.Text
+  variables       String[]
+  examples        String?   // JSON string
+  performance     String?   // JSON string
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+model UserModelHistory {
+  userId          String    @id
+  preferences     String    // JSON string of model preferences
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RoutingDecision {
+  id              String    @id @default(cuid())
+  userId          String
+  selectedModel   String
+  reason          String
+  confidenceScore Float
+  metadata        String?   // JSON string
+  timestamp       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([selectedModel])
+  @@index([timestamp])
+}
+
+model AIUsageLog {
+  id              String    @id @default(cuid())
+  userId          String
+  model           String
+  taskType        String
+  success         Boolean
+  responseTime    Int?      // milliseconds
+  error           String?
+  cost            Float?
+  timestamp       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([model])
+  @@index([timestamp])
+  @@index([userId])
 }
 
 enum Role {
@@ -483,7 +637,7 @@ model TierHistory {
   @@index([createdAt])
 }
 
-model TokenTransaction {
+model CreditTransaction {
   id              String    @id @default(cuid())
   userId          String
   amount          Int
@@ -608,7 +762,7 @@ model ReferralReward {
   refereeId       String    // 피추천인 ID
   
   rewardType      String    // SIGNUP, FIRST_PAYMENT, MILESTONE
-  tokensAwarded   Int
+  creditsAwarded  Int
   cashAwarded     Float     @default(0)
   
   triggerEvent    String    // 보상을 트리거한 이벤트
@@ -647,7 +801,7 @@ model FineTuningData {
   
   // 메타데이터
   responseTime  Int      // 밀리초
-  tokenCount    Int
+  creditCount   Int
   modelUsed     String
   errorOccurred Boolean  @default(false)
   
@@ -682,7 +836,7 @@ model AIModelConfig {
   // 모델별 설정
   maxTokens     Int      @default(2000)
   temperature   Float    @default(0.7)
-  costPerToken  Float    // 토큰당 비용 (USD)
+  costPerCredit Float    // 크레딧당 비용 (USD)
   
   // 사용 조건
   taskTypes     String[] // CREATE, CORRECT, ANALYZE 등
@@ -813,5 +967,264 @@ model FileVersion {
   @@unique([fileId, versionNumber])
   @@index([fileId])
   @@index([createdBy])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// PipeData 통합 모델들
+// =============================================================================
+
+model KnowledgeItem {
+  id              String    @id @default(cuid())
+  
+  // 핵심 Q&A 데이터
+  question        String    @db.Text
+  answer          String    @db.Text
+  excelFunctions  String[]  // VLOOKUP, INDEX, MATCH 등
+  codeSnippets    String[]  // 예제 수식들
+  
+  // 분류 정보
+  difficulty      KnowledgeDifficulty @default(MEDIUM)
+  qualityScore    Float     // 0.0 - 10.0
+  source          String    // pipedata_stackoverflow, pipedata_reddit 등
+  tags            String[]  // excel, vlookup, error-handling 등
+  
+  // 벡터 검색을 위한 임베딩
+  embedding       Float[]   // pgvector 확장 사용
+  
+  // 메타데이터
+  metadata        Json      // votes, accepted, author 등 소스별 정보
+  
+  // 사용 통계
+  searchCount     Int       @default(0)  // 검색된 횟수
+  useCount        Int       @default(0)  // 실제 사용된 횟수
+  helpfulVotes    Int       @default(0)  // 도움됨 투표
+  
+  // 관리 정보
+  isActive        Boolean   @default(true)
+  lastUsed        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // 관계
+  usageLogs       KnowledgeUsageLog[]
+  feedbacks       KnowledgeFeedback[]
+  
+  @@index([source])
+  @@index([difficulty])
+  @@index([qualityScore])
+  @@index([searchCount])
+  @@index([isActive])
+  @@index([tags])
+}
+
+model KnowledgeUsageLog {
+  id                String        @id @default(cuid())
+  knowledgeItemId   String
+  userId            String?
+  
+  // 사용 컨텍스트
+  userQuery         String        @db.Text
+  similarityScore   Float         // 0.0 - 1.0
+  wasHelpful        Boolean?      // 사용자 피드백
+  
+  // 사용된 상황
+  analysisId        String?       // 어떤 분석에서 사용되었는지
+  sessionId         String?       // 사용자 세션
+  
+  createdAt         DateTime      @default(now())
+  
+  knowledgeItem     KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+  user              User?         @relation("KnowledgeUsageLogs", fields: [userId], references: [id])
+  
+  @@index([knowledgeItemId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([wasHelpful])
+}
+
+model KnowledgeFeedback {
+  id                String        @id @default(cuid())
+  knowledgeItemId   String
+  userId            String?
+  
+  // 피드백 내용
+  rating            Int           // 1-5 점수
+  comment           String?       @db.Text
+  isReported        Boolean       @default(false)
+  reportReason      String?       // 부적절한 내용 신고 사유
+  
+  createdAt         DateTime      @default(now())
+  
+  knowledgeItem     KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+  user              User?         @relation("KnowledgeFeedbacks", fields: [userId], references: [id])
+  
+  @@index([knowledgeItemId])
+  @@index([userId])
+  @@index([rating])
+  @@index([isReported])
+}
+
+model PipeDataSync {
+  id              String    @id @default(cuid())
+  
+  // 동기화 정보
+  batchId         String    @unique
+  source          String    // pipedata_stackoverflow, pipedata_reddit 등
+  totalItems      Int
+  processedItems  Int       @default(0)
+  successItems    Int       @default(0)
+  errorItems      Int       @default(0)
+  
+  // 상태 관리
+  status          PipeDataSyncStatus @default(PENDING)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  // 에러 정보
+  errors          String[]  // 에러 메시지들
+  lastError       String?   @db.Text
+  
+  // 메타데이터
+  qualityThreshold Float    @default(7.0)  // 수집 품질 임계값
+  metadata        Json?     // 추가 정보
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model RAGCache {
+  id              String    @id @default(cuid())
+  
+  // 캐시 키 (사용자 쿼리의 해시)
+  queryHash       String    @unique
+  originalQuery   String    @db.Text
+  
+  // 검색 결과 캐시
+  searchResults   Json      // KnowledgeSearchResult[]
+  enhancedPrompt  String?   @db.Text
+  
+  // 캐시 메타정보
+  hitCount        Int       @default(0)
+  lastHit         DateTime?
+  expiresAt       DateTime
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([queryHash])
+  @@index([expiresAt])
+  @@index([hitCount])
+}
+
+// Enum 정의들
+enum KnowledgeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum PipeDataSyncStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// 사용자 통계 모델
+model UserStats {
+  id                          String    @id @default(cuid())
+  userId                      String    @unique
+  
+  // 분석 통계
+  totalAnalyses               Int       @default(0)
+  errorDetectionCount         Int       @default(0)
+  visualComparisonCount       Int       @default(0)
+  improvementSuggestionCount  Int       @default(0)
+  
+  // AI 사용 통계
+  totalTokensUsed             Int       @default(0)
+  totalCost                   Float     @default(0)
+  preferredTier               String?   // TIER1, TIER2, TIER3
+  
+  // 평균값
+  averageFileSize             Float     @default(0)
+  averageErrorCount           Float     @default(0)
+  averageProcessingTime       Float     @default(0)
+  
+  // 시간 정보
+  lastAnalysisAt              DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// 분석 이력 모델
+model AnalysisHistory {
+  id              String    @id @default(cuid())
+  userId          String
+  analysisId      String    @unique
+  
+  // 분석 정보
+  type            String    // text, image, hybrid
+  tier            String    // TIER1, TIER2, TIER3
+  query           String?   @db.Text
+  
+  // 파일 정보
+  fileInfo        Json      // { excelFileName, excelFileSize, imageCount, totalSize }
+  
+  // 결과 정보
+  result          Json      // { confidence, errorCount, correctionCount }
+  
+  // 비용 정보
+  cost            Json      // { tokensUsed, estimatedCost }
+  
+  // 메타데이터
+  metadata        Json?
+  
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([type])
+  @@index([tier])
+  @@index([createdAt])
+}
+
+// 부분 결과 저장 모델
+model PartialResult {
+  id              String    @id @default(cuid())
+  sessionId       String
+  stage           String    // upload, processing, analysis, download
+  data            Json
+  errorMessage    String?
+  attemptNumber   Int
+  createdAt       DateTime  @default(now())
+  
+  @@index([sessionId])
+}
+
+// 에러 로그 모델
+model ErrorLog {
+  id              String    @id @default(cuid())
+  sessionId       String
+  stage           String
+  errorMessage    String    @db.Text
+  errorStack      String?   @db.Text
+  attemptNumber   Int
+  resolution      String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  
+  @@index([sessionId])
   @@index([createdAt])
 }

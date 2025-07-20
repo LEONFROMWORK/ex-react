@@ -1,1 +1,0 @@
-export { SendMessage } from './SendMessage'

@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
           email: validatedData.email,
           password: hashedPassword,
           referralCode,
-          tokens: signupBonus, // 가입 보너스
+          credits: signupBonus, // 가입 보너스
           emailVerified: skipEmailVerification ? new Date() : null,
         }
       })

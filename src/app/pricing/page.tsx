@@ -23,7 +23,7 @@ interface PricingPlan {
   id: string
   name: string
   description: string
-  tokens: number
+  credits: number
   price: number
   originalPrice?: number
   popular?: boolean
@@ -36,7 +36,7 @@ const pricingPlans: PricingPlan[] = [
     id: 'starter',
     name: '스타터',
     description: '개인 사용자를 위한 기본 패키지',
-    tokens: 100,
+    credits: 100,
     price: 9900,
     features: [
       '100 토큰',
@@ -50,7 +50,7 @@ const pricingPlans: PricingPlan[] = [
     id: 'professional',
     name: '프로페셔널',
     description: '전문가를 위한 인기 패키지',
-    tokens: 500,
+    credits: 500,
     price: 39900,
     originalPrice: 49900,
     popular: true,
@@ -68,7 +68,7 @@ const pricingPlans: PricingPlan[] = [
     id: 'enterprise',
     name: '엔터프라이즈',
     description: '팀과 기업을 위한 대용량 패키지',
-    tokens: 2000,
+    credits: 2000,
     price: 149900,
     features: [
       '2,000 토큰',
@@ -86,7 +86,7 @@ export default function PricingPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { data: session, status } = useSession()
-  const tokens = useUserStore((state) => state.tokens)
+  const credits = useUserStore((state) => state.credits)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   
@@ -112,11 +112,11 @@ export default function PricingPage() {
       await new Promise(resolve => setTimeout(resolve, 2000))
       
       // 토큰 추가
-      useUserStore.getState().addTokens(plan.tokens, `${plan.name} 플랜 구매`)
+      useUserStore.getState().addCredits(plan.credits, `${plan.name} 플랜 구매`)
       
       toast({
         title: '구매 완료',
-        description: `${plan.tokens} 토큰이 추가되었습니다.`,
+        description: `${plan.credits} 크레딧이 추가되었습니다.`,
         duration: 5000
       })
       
@@ -145,7 +145,7 @@ export default function PricingPage() {
           {status === 'authenticated' && (
             <div className="inline-flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2">
               <Coins className="h-5 w-5 text-yellow-500" />
-              <span className="font-medium">현재 보유: {tokens} 토큰</span>
+              <span className="font-medium">현재 보유: {credits} 크레딧</span>
             </div>
           )}
         </div>
@@ -173,7 +173,7 @@ export default function PricingPage() {
                   <div className="flex items-center justify-between mb-4">
                     <Icon className="h-8 w-8 text-primary" />
                     <Badge variant="secondary" className="text-lg">
-                      {plan.tokens} 토큰
+                      {plan.credits} 크레딧
                     </Badge>
                   </div>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
@@ -198,7 +198,7 @@ export default function PricingPage() {
                       </div>
                     )}
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      토큰당 ₩{Math.round(plan.price / plan.tokens)}
+                      크레딧당 ₩{Math.round(plan.price / plan.credits)}
                     </p>
                   </div>
                   

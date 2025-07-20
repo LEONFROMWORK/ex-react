@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { Result } from "@/types/common"
+import { Result } from "@/Common/Result"
 
 interface ProcessReferralRewardRequest {
   userId: string
@@ -9,7 +9,7 @@ interface ProcessReferralRewardRequest {
 
 interface ProcessReferralRewardResponse {
   rewardProcessed: boolean
-  tokensAwarded?: number
+  creditsAwarded?: number
   referrerId?: string
 }
 
@@ -23,10 +23,7 @@ export class ProcessReferralRewardHandler {
       })
 
       if (!user?.referredBy) {
-        return {
-          success: true,
-          data: { rewardProcessed: false }
-        }
+        return Result.success({ rewardProcessed: false })
       }
 
       // Find the referrer's referral record
@@ -36,10 +33,7 @@ export class ProcessReferralRewardHandler {
       })
 
       if (!referral) {
-        return {
-          success: true,
-          data: { rewardProcessed: false }
-        }
+        return Result.success({ rewardProcessed: false })
       }
 
       // Check if this is the first payment
@@ -53,10 +47,7 @@ export class ProcessReferralRewardHandler {
       })
 
       if (existingPayments > 0) {
-        return {
-          success: true,
-          data: { rewardProcessed: false }
-        }
+        return Result.success({ rewardProcessed: false })
       }
 
       // Check if reward already processed for this payment
@@ -64,22 +55,18 @@ export class ProcessReferralRewardHandler {
         where: {
           refereeId: request.userId,
           rewardType: "FIRST_PAYMENT",
-          triggerDetails: {
-            path: ['paymentId'],
-            equals: request.paymentId
-          }
+          triggerDetails: JSON.stringify({
+            paymentId: request.paymentId
+          })
         }
       })
 
       if (existingReward) {
-        return {
-          success: true,
-          data: { rewardProcessed: false }
-        }
+        return Result.success({ rewardProcessed: false })
       }
 
       // Process the reward
-      const rewardTokens = referral.tokenRewardAmount
+      const rewardCredits = referral.creditRewardAmount || 500 // 기본 크레딧 보상
       const cashReward = request.paymentAmount * 0.1 // 10% of payment as cash reward
 
       // Create reward record
@@ -89,14 +76,14 @@ export class ProcessReferralRewardHandler {
           referrerId: referral.userId,
           refereeId: request.userId,
           rewardType: "FIRST_PAYMENT",
-          tokensAwarded: rewardTokens,
+          creditsAwarded: rewardCredits,
           cashAwarded: cashReward,
           triggerEvent: "first_payment_completed",
-          triggerDetails: {
+          triggerDetails: JSON.stringify({
             paymentId: request.paymentId,
             paymentAmount: request.paymentAmount,
             paymentDate: new Date()
-          },
+          }),
           status: "PENDING"
         }
       })
@@ -106,14 +93,14 @@ export class ProcessReferralRewardHandler {
         prisma.user.update({
           where: { id: referral.userId },
           data: {
-            tokens: { increment: rewardTokens }
+            credits: { increment: rewardCredits }
           }
         }),
         prisma.referral.update({
           where: { id: referral.id },
           data: {
             referralCount: { increment: 1 },
-            totalTokensEarned: { increment: rewardTokens },
+            totalCreditsEarned: { increment: rewardCredits },
             totalEarned: { increment: cashReward }
           }
         }),
@@ -136,31 +123,28 @@ export class ProcessReferralRewardHandler {
           userId: referral.userId,
           type: "BONUS",
           amount: 0,
-          tokens: rewardTokens,
+          credits: rewardCredits,
           description: `추천 보상 - ${user.referredBy} 첫 결제`,
           status: "COMPLETED",
-          metadata: {
+          metadata: JSON.stringify({
             referralCode: user.referredBy,
             refereeId: request.userId,
             rewardType: "FIRST_PAYMENT"
-          }
+          })
         }
       })
 
-      return {
-        success: true,
-        data: {
-          rewardProcessed: true,
-          tokensAwarded: rewardTokens,
-          referrerId: referral.userId
-        }
-      }
+      return Result.success({
+        rewardProcessed: true,
+        creditsAwarded: rewardCredits,
+        referrerId: referral.userId
+      })
     } catch (error) {
       console.error("Process referral reward error:", error)
-      return {
-        success: false,
-        error: "Failed to process referral reward"
-      }
+      return Result.failure({
+        code: "REFERRAL_REWARD_FAILED",
+        message: "Failed to process referral reward"
+      })
     }
   }
 }

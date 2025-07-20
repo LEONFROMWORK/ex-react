@@ -26,7 +26,7 @@ export interface SignupResponse {
 // Domain Rules
 export class SignupDomainRules {
   static readonly passwordSaltRounds = 10;
-  static readonly defaultUserRole = "user";
+  static readonly defaultUserRole = "USER";
   static readonly defaultCredits = 100;
 
   static async isEmailAvailable(email: string): Promise<boolean> {
@@ -89,6 +89,9 @@ export class SignupHandler {
 
       // Create user with transaction
       const user = await prisma.$transaction(async (tx) => {
+        // Generate a temporary referral code first
+        const tempReferralCode = `TEMP_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+        
         // Create user
         const newUser = await tx.user.create({
           data: {
@@ -97,10 +100,11 @@ export class SignupHandler {
             name: request.name,
             role: SignupDomainRules.defaultUserRole,
             credits: SignupDomainRules.defaultCredits,
+            referralCode: tempReferralCode,
           },
         });
 
-        // Generate and save referral code
+        // Generate final referral code and update
         const referralCode = SignupDomainRules.generateReferralCode(newUser.id);
         await tx.user.update({
           where: { id: newUser.id },

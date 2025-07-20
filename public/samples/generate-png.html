@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PNG</title>
+    <style>
+        canvas { border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Excel Error Screenshot Generator</h1>
+    <canvas id="canvas" width="800" height="400"></canvas>
+    <br>
+    <button onclick="downloadPNG()">Download as PNG</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Background
+        ctx.fillStyle = '#f5f5f5';
+        ctx.fillRect(0, 0, 800, 400);
+        
+        // Excel Window
+        ctx.fillStyle = 'white';
+        ctx.fillRect(50, 30, 700, 340);
+        ctx.strokeStyle = '#d0d0d0';
+        ctx.strokeRect(50, 30, 700, 340);
+        
+        // Toolbar
+        ctx.fillStyle = '#f7f7f7';
+        ctx.fillRect(50, 30, 700, 30);
+        ctx.strokeRect(50, 30, 700, 30);
+        ctx.fillStyle = 'black';
+        ctx.font = '14px Arial';
+        ctx.fillText('월별매출현황.xlsx - Microsoft Excel', 60, 50);
+        
+        // Formula Bar
+        ctx.fillStyle = '#f9f9f9';
+        ctx.fillRect(50, 60, 700, 25);
+        ctx.strokeRect(50, 60, 700, 25);
+        ctx.fillStyle = 'black';
+        ctx.font = '12px monospace';
+        ctx.fillText('fx = C3: #DIV/0!', 60, 78);
+        
+        // Grid
+        const cellWidth = 100;
+        const cellHeight = 25;
+        const startX = 100;
+        const startY = 110;
+        
+        // Headers
+        ctx.fillStyle = '#e8e8e8';
+        ctx.font = 'bold 12px Arial';
+        
+        // Column headers
+        const columns = ['A', 'B', 'C', 'D', 'E'];
+        columns.forEach((col, i) => {
+            ctx.fillRect(startX + i * cellWidth, 85, cellWidth, cellHeight);
+            ctx.strokeRect(startX + i * cellWidth, 85, cellWidth, cellHeight);
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.fillText(col, startX + i * cellWidth + cellWidth/2, 102);
+            ctx.fillStyle = '#e8e8e8';
+        });
+        
+        // Data rows
+        const data = [
+            ['이름', '매출(1월)', '매출(2월)', '매출(3월)', '합계'],
+            ['김철수', '1,500,000', '1,800,000', '2,000,000', '5,300,000'],
+            ['이영희', '2,000,000', '#DIV/0!', '2,500,000', '#DIV/0!'],
+            ['박민수', '1,800,000', '2,200,000', '#REF!', '#REF!']
+        ];
+        
+        data.forEach((row, rowIndex) => {
+            // Row number
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(50, startY + rowIndex * cellHeight, 50, cellHeight);
+            ctx.strokeRect(50, startY + rowIndex * cellHeight, 50, cellHeight);
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText((rowIndex + 1).toString(), 75, startY + rowIndex * cellHeight + 17);
+            
+            // Data cells
+            row.forEach((cell, colIndex) => {
+                const x = startX + colIndex * cellWidth;
+                const y = startY + rowIndex * cellHeight;
+                
+                // Highlight error cell
+                if (rowIndex === 2 && colIndex === 2) {
+                    ctx.fillStyle = '#fff3cd';
+                    ctx.fillRect(x, y, cellWidth, cellHeight);
+                    ctx.strokeStyle = '#ffc107';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, cellWidth, cellHeight);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#d0d0d0';
+                } else {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x, y, cellWidth, cellHeight);
+                    ctx.strokeRect(x, y, cellWidth, cellHeight);
+                }
+                
+                // Text
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'left';
+                if (cell.startsWith('#')) {
+                    ctx.fillStyle = '#d00000';
+                    ctx.font = 'bold 12px Arial';
+                } else {
+                    ctx.fillStyle = 'black';
+                }
+                ctx.fillText(cell, x + 10, y + 17);
+            });
+        });
+        
+        // Error tooltip
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(280, 195, 140, 30);
+        ctx.beginPath();
+        ctx.moveTo(340, 195);
+        ctx.lineTo(350, 185);
+        ctx.lineTo(360, 195);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('0으로 나누기 오류', 350, 212);
+        
+        // Warning message
+        ctx.fillStyle = '#d00000';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ 여러 수식 오류가 발견되었습니다', 400, 320);
+        
+        function downloadPNG() {
+            const link = document.createElement('a');
+            link.download = 'excel-error-screenshot.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>

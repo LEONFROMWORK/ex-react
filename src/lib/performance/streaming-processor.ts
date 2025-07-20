@@ -154,7 +154,10 @@ export class StreamingProcessor {
     
     return new TransformStream({
       async transform(chunk, controller) {
-        const result = await processor.analyzeChunk(chunk.buffer, 0, 0)
+        const buffer = chunk instanceof ArrayBuffer ? chunk : 
+                       chunk.buffer instanceof ArrayBuffer ? chunk.buffer : 
+                       Buffer.from(chunk).buffer
+        const result = await processor.analyzeChunk(buffer, 0, 0)
         
         controller.enqueue({
           type: 'result',

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       id: user.id,
       email: user.email,
       name: user.name,
-      tokens: user.tokens,
+      credits: user.credits,
       referralCode: user.referralCode,
       role: user.role,
       profile: user.profile,

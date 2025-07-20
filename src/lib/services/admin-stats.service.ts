@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { USER_TIERS, TIER_LIMITS } from '@/lib/constants/user-tiers'
 import { startOfMonth, startOfWeek, startOfDay, subDays } from 'date-fns'
+import type { User, File, Payment, CreditTransaction } from '@prisma/client'
 
 export interface AdminDashboardStats {
   users: {
@@ -25,6 +26,17 @@ export interface AdminDashboardStats {
     averageProcessingTime: number
     successRate: number
     errorRate: number
+  }
+}
+
+export interface UserDetails extends User {
+  creditTransactions: CreditTransaction[]
+  files: File[]
+  payments: Payment[]
+  stats: {
+    totalFiles: number
+    totalCreditsUsed: number
+    totalSpent: number
   }
 }
 
@@ -118,9 +130,9 @@ export class AdminStatsService {
           createdAt: { gte: thirtyDaysAgo }
         },
         _count: true,
-        _avg: { size: true }
+        _avg: { fileSize: true }
       }),
-      prisma.tokenTransaction.aggregate({
+      prisma.creditTransaction.aggregate({
         where: {
           type: 'SPENT',
           createdAt: { gte: thirtyDaysAgo }
@@ -176,7 +188,7 @@ export class AdminStatsService {
         filesProcessed: fileStats._count || 0,
         tokensUsed: tokenStats._sum.amount || 0,
         errorsFixed: errorStats,
-        averageFileSize: fileStats._avg.size || 0
+        averageFileSize: fileStats._avg.fileSize || 0
       },
       performance: {
         averageProcessingTime: processingStats._avg.processingTime || 0,
@@ -222,14 +234,14 @@ export class AdminStatsService {
           name: true,
           tier: true,
           role: true,
-          tokens: true,
+          credits: true,
           createdAt: true,
           lastActiveAt: true,
           emailVerified: true,
           _count: {
             select: {
               files: true,
-              tokenTransactions: true
+              creditTransactions: true
             }
           }
         },
@@ -247,11 +259,11 @@ export class AdminStatsService {
   }
   
   // 사용자 상세 정보
-  async getUserDetails(userId: string) {
+  async getUserDetails(userId: string): Promise<UserDetails> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        tokenTransactions: {
+        creditTransactions: {
           take: 10,
           orderBy: { createdAt: 'desc' }
         },
@@ -271,7 +283,7 @@ export class AdminStatsService {
     // 통계 계산
     const stats = await Promise.all([
       prisma.file.count({ where: { userId } }),
-      prisma.tokenTransaction.aggregate({
+      prisma.creditTransaction.aggregate({
         where: { userId, type: 'SPENT' },
         _sum: { amount: true }
       }),
@@ -285,7 +297,7 @@ export class AdminStatsService {
       ...user,
       stats: {
         totalFiles: stats[0],
-        totalTokensUsed: stats[1]._sum.amount || 0,
+        totalCreditsUsed: stats[1]._sum.amount || 0,
         totalSpent: stats[2]._sum.amount || 0
       }
     }
@@ -337,26 +349,26 @@ export class AdminStatsService {
     return true
   }
   
-  // 토큰 지급/차감 (관리자용)
-  async adjustUserTokens(userId: string, amount: number, reason: string, adminId: string) {
+  // 크레딧 지급/차감 (관리자용)
+  async adjustUserCredits(userId: string, amount: number, reason: string, adminId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { tokens: true }
+      select: { credits: true }
     })
     
     if (!user) throw new Error('사용자를 찾을 수 없습니다.')
     
-    const newBalance = user.tokens + amount
-    if (newBalance < 0) throw new Error('토큰 잔액이 음수가 될 수 없습니다.')
+    const newBalance = user.credits + amount
+    if (newBalance < 0) throw new Error('크레딧 잔액이 음수가 될 수 없습니다.')
     
-    // 토큰 업데이트
+    // 크레딧 업데이트
     await prisma.user.update({
       where: { id: userId },
-      data: { tokens: newBalance }
+      data: { credits: newBalance }
     })
     
     // 거래 기록
-    await prisma.tokenTransaction.create({
+    await prisma.creditTransaction.create({
       data: {
         userId,
         amount: Math.abs(amount),
@@ -370,7 +382,7 @@ export class AdminStatsService {
     await prisma.auditLog.create({
       data: {
         userId: adminId,
-        action: 'ADJUST_USER_TOKENS',
+        action: 'ADJUST_USER_CREDITS',
         targetId: userId,
         details: {
           amount,

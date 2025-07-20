@@ -19,7 +19,7 @@ export class TenantMiddleware {
       
       if (session?.user) {
         // For SaaS, tenantId could be organizationId or just userId for personal accounts
-        const tenantId = session.user.organizationId || session.user.id;
+        const tenantId = (session.user as any).organizationId || session.user.id;
         const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
         
         // Store tenant context

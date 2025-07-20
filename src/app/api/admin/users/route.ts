@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
           name: true,
           role: true,
           tier: true,
-          tokens: true,
+          credits: true,
           emailVerified: true,
           createdAt: true,
           lastActiveAt: true,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
             select: {
               plan: true,
               status: true,
-              tokensRemaining: true
+              creditsRemaining: true
             }
           },
           _count: {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
               files: true,
               analyses: true,
               reviews: true,
-              tokenTransactions: true
+              creditTransactions: true
             }
           }
         },

@@ -20,7 +20,7 @@ export async function tenantMiddleware(request: NextRequest) {
 
     // Add tenant context to headers
     const headers = new Headers(request.headers)
-    headers.set('x-tenant-id', session.user.tenantId || 'default')
+    headers.set('x-tenant-id', 'default') // 단일 테넌트 환경
     headers.set('x-user-id', session.user.id)
 
     return NextResponse.next({

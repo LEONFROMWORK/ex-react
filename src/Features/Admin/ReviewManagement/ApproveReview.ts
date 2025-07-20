@@ -61,7 +61,7 @@ export class ApproveReviewHandler {
           await tx.user.update({
             where: { id: review.userId },
             data: {
-              tokens: {
+              credits: {
                 increment: request.bonusTokens,
               },
             },
@@ -73,13 +73,13 @@ export class ApproveReviewHandler {
               userId: review.userId,
               type: "BONUS",
               amount: 0,
-              tokens: request.bonusTokens,
+              credits: request.bonusTokens,
               description: "리뷰 작성 보너스",
               status: "COMPLETED",
-              metadata: {
+              metadata: JSON.stringify({
                 reviewId: review.id,
                 adminId: request.adminId,
-              },
+              }),
             },
           });
 
@@ -93,11 +93,11 @@ export class ApproveReviewHandler {
             action: "REVIEW_APPROVED",
             targetType: "review",
             targetId: request.reviewId,
-            metadata: {
+            metadata: JSON.stringify({
               comment: request.comment,
               bonusGranted: request.grantBonus,
               tokensAwarded,
-            },
+            }),
           },
         });
 

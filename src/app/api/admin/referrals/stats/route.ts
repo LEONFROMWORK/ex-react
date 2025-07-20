@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         status: "COMPLETED"
       },
       _sum: {
-        tokensAwarded: true,
+        creditsAwarded: true,
         cashAwarded: true
       }
     })
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     const stats = {
       totalReferrals,
       activeReferrers,
-      totalTokensAwarded: rewardStats._sum.tokensAwarded || 0,
+      totalTokensAwarded: rewardStats._sum.creditsAwarded || 0,
       totalCashAwarded: rewardStats._sum.cashAwarded || 0,
       pendingRewards,
       conversionRate

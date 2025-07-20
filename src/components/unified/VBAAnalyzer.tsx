@@ -139,7 +139,7 @@ export function VBAAnalyzer({ results }: VBAAnalyzerProps) {
                       <span className="font-medium">{issue.type}</span>
                     </div>
                     <Badge 
-                      variant={issue.severity === 'high' ? 'destructive' : 'warning'}
+                      variant={issue.severity === 'high' ? 'destructive' : 'destructive'}
                     >
                       {issue.severity === 'high' ? '높음' : '중간'}
                     </Badge>

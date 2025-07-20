@@ -16,7 +16,44 @@ import {
 } from 'lucide-react'
 import { ReportService } from '@/lib/services/report.service'
 import { useFileStore } from '@/lib/stores/fileStore'
-import { TokenService, TOKEN_COSTS } from '@/lib/services/token.service'
+import { CreditService, CREDIT_COSTS } from '@/lib/services/credit.service'
+// import { AnalysisItem, CellLocation } from '@/lib/excel/analyzer'
+
+// 임시 타입 정의
+interface CellLocation {
+  sheet: string
+  cell?: string
+  range?: string
+  row?: number
+  column?: number
+}
+
+interface AnalysisItem {
+  id: string
+  type: 'error' | 'warning' | 'optimization' | 'info'
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  location: CellLocation
+  description: string
+  details?: string
+  suggestion?: string
+  autoFixAvailable: boolean
+  confidence: number
+}
+
+// AnalysisResult → AnalysisItem 변환 함수
+const convertToAnalysisItems = (results: any[]): AnalysisItem[] => {
+  return results.map(result => ({
+    ...result,
+    type: result.type === 'vba' ? 'info' as const : result.type,
+    severity: result.severity === 'high' ? 'critical' as const : result.severity,
+    location: typeof result.location === 'string' 
+      ? { sheet: 'Sheet1', cell: result.location } as CellLocation
+      : result.location,
+    autoFixAvailable: result.canAutoFix || false,
+    confidence: 0.85,
+    details: result.description
+  }))
+}
 
 type ReportFormat = 'pdf' | 'excel'
 
@@ -34,14 +71,14 @@ export function ReportGenerator({ fileId, fileName, fileSize }: ReportGeneratorP
   const [reportService] = useState(() => new ReportService())
   
   const handleGenerateReport = async () => {
-    // 토큰 확인
-    const tokenService = TokenService.getInstance()
-    const cost = TOKEN_COSTS.GENERATE_REPORT
+    // 크레딧 확인
+    const creditService = CreditService.getInstance()
+    const cost = CREDIT_COSTS.GENERATE_REPORT
     
-    if (!tokenService.canAfford(cost)) {
+    if (!creditService.canAfford(cost)) {
       toast({
-        title: '토큰 부족',
-        description: `리포트 생성에 ${cost} 토큰이 필요합니다.`,
+        title: '크레딧 부족',
+        description: `리포트 생성에 ${cost} 크레딧이 필요합니다.`,
         variant: 'destructive'
       })
       return
@@ -50,16 +87,17 @@ export function ReportGenerator({ fileId, fileName, fileSize }: ReportGeneratorP
     setIsGenerating(true)
     
     try {
-      // 토큰 차감
-      const tokenUsed = await tokenService.useTokens(cost, '분석 리포트 생성')
-      if (!tokenUsed) {
-        throw new Error('토큰 차감 실패')
+      // 크레딧 차감
+      const creditUsed = await creditService.useCredits(cost, '분석 리포트 생성')
+      if (!creditUsed) {
+        throw new Error('크레딧 차감 실패')
       }
       
       // 리포트 데이터 준비
+      const convertedResults = convertToAnalysisItems(analysisResults)
       const reportData = reportService.prepareReportData(
         { name: fileName, size: fileSize },
-        analysisResults
+        convertedResults
       )
       
       // 리포트 생성
@@ -169,7 +207,7 @@ export function ReportGenerator({ fileId, fileName, fileSize }: ReportGeneratorP
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              리포트 생성 ({TOKEN_COSTS.GENERATE_REPORT} 토큰)
+              리포트 생성 ({CREDIT_COSTS.GENERATE_REPORT} 크레딧)
             </>
           )}
         </Button>

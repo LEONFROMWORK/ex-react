@@ -92,14 +92,14 @@ export class UpdateUserStatusHandler {
           action: `USER_${request.action.toUpperCase()}`,
           targetType: "user",
           targetId: request.userId,
-          metadata: {
+          metadata: JSON.stringify({
             previousStatus,
             newStatus: {
               emailVerified: updatedUser.emailVerified,
               role: updatedUser.role,
             },
             reason: request.reason,
-          },
+          }),
           ipAddress: request.ipAddress,
         },
       });

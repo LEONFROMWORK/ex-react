@@ -76,7 +76,7 @@ export class ExcelAnalysisCacheService {
       const promptHash = crypto.createHash('sha256').update(prompt).digest('hex')
       const cacheKey = this.generateCacheKey(promptHash, 'generation')
 
-      const cached = await this.cache.get<ExcelAnalysisCache>(cacheKey, {
+      const cached = await this.cache.get(cacheKey, {
         namespace: this.namespace,
         compress: true,
       })
@@ -140,7 +140,7 @@ export class ExcelAnalysisCacheService {
       const fileHash = this.generateFileHash(fileBuffer)
       const cacheKey = this.generateCacheKey(fileHash, 'vba-extraction')
 
-      const cached = await this.cache.get<ExcelAnalysisCache>(cacheKey, {
+      const cached = await this.cache.get(cacheKey, {
         namespace: this.namespace,
         compress: true,
       })
@@ -207,7 +207,7 @@ export class ExcelAnalysisCacheService {
       const contentHash = crypto.createHash('sha256').update(content).digest('hex')
       const cacheKey = this.generateCacheKey(contentHash, 'vba-analysis')
 
-      const cached = await this.cache.get<ExcelAnalysisCache>(cacheKey, {
+      const cached = await this.cache.get(cacheKey, {
         namespace: this.namespace,
         compress: true,
       })
@@ -276,7 +276,7 @@ export class ExcelAnalysisCacheService {
         .digest('hex')
       const cacheKey = this.generateCacheKey(dataHash, 'template-generation')
 
-      const cached = await this.cache.get<ExcelAnalysisCache>(cacheKey, {
+      const cached = await this.cache.get(cacheKey, {
         namespace: this.namespace,
         compress: true,
       })

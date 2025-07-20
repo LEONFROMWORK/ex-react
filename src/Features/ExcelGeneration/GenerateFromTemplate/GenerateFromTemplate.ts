@@ -176,15 +176,16 @@ export class GenerateFromTemplateHandler {
   private async saveToDatabase(data: any): Promise<void> {
     try {
       const prisma = container.getPrisma()
-      await prisma.generatedFile.create({
+      await prisma.file.create({
         data: {
-          fileId: data.fileId,
+          id: data.fileId,
           userId: data.userId,
           fileName: data.fileName,
+          originalName: data.fileName,
           fileSize: data.fileSize,
-          templateId: data.templateId,
-          customization: data.customization,
-          createdAt: new Date(),
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          uploadUrl: data.downloadUrl || '',
+          status: 'COMPLETED',
         },
       })
     } catch (error) {

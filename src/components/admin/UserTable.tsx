@@ -130,7 +130,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
     
     try {
       setProcessingUserId(tokenDialog.user.id)
-      const response = await fetch(`/api/admin/users/${tokenDialog.user.id}/tokens`, {
+      const response = await fetch(`/api/admin/users/${tokenDialog.user.id}/credits`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -142,14 +142,14 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to adjust user tokens")
+        throw new Error("Failed to adjust user credits")
       }
 
       setTokenDialog({ open: false, user: null })
       setTokenData({ amount: '', reason: '' })
       onUserUpdate()
     } catch (error) {
-      console.error("Error adjusting user tokens:", error)
+      console.error("Error adjusting user credits:", error)
     } finally {
       setProcessingUserId(null)
     }
@@ -216,7 +216,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
       FREE: "outline",
       BASIC: "default",
       PREMIUM: "secondary",
-      ENTERPRISE: "destructive",
+      ENTERPRISE: "default",
     }
 
     return (
@@ -236,7 +236,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
             <TableHead>역할</TableHead>
             <TableHead>등급</TableHead>
             <TableHead>상태</TableHead>
-            <TableHead>토큰</TableHead>
+            <TableHead>크레딧</TableHead>
             <TableHead>활동</TableHead>
             <TableHead>가입일</TableHead>
             <TableHead className="text-right">작업</TableHead>
@@ -257,7 +257,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
               <TableCell>
                 <div className="flex items-center gap-1">
                   <Coins className="h-4 w-4 text-gray-400" />
-                  <span>{user.tokens}</span>
+                  <span>{user.credits}</span>
                 </div>
               </TableCell>
               <TableCell>
@@ -331,7 +331,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
                       }}
                     >
                       <Coins className="mr-2 h-4 w-4" />
-                      토큰 조정
+                      크레딧 조정
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -439,10 +439,10 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
     <Dialog open={tokenDialog.open} onOpenChange={(open) => setTokenDialog({ open, user: tokenDialog.user })}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>토큰 조정</DialogTitle>
+          <DialogTitle>크레딧 조정</DialogTitle>
           <DialogDescription>
-            {tokenDialog.user?.name} ({tokenDialog.user?.email})의 토큰을 조정합니다.
-            <br />현재 토큰: {tokenDialog.user?.tokens}
+            {tokenDialog.user?.name} ({tokenDialog.user?.email})의 크레딧을 조정합니다.
+            <br />현재 크레딧: {tokenDialog.user?.credits}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -462,7 +462,7 @@ export function UserTable({ users, onUserUpdate }: UserTableProps) {
               id="reason"
               value={tokenData.reason}
               onChange={(e) => setTokenData({ ...tokenData, reason: e.target.value })}
-              placeholder="토큰 조정 사유를 입력하세요"
+              placeholder="크레딧 조정 사유를 입력하세요"
               rows={3}
             />
           </div>

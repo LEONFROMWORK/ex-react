@@ -98,8 +98,8 @@ export class CreateReviewHandler {
           prisma.subscription.update({
             where: { userId: request.userId },
             data: {
-              tokensRemaining: {
-                increment: 50, // Bonus tokens for review
+              creditsRemaining: {
+                increment: 5, // Bonus credits for review
               },
             },
           }),
@@ -108,7 +108,7 @@ export class CreateReviewHandler {
               userId: request.userId,
               type: "BONUS",
               amount: 0,
-              tokens: 50,
+              credits: 5,
               description: "이용 후기 작성 보너스",
               status: "COMPLETED",
             },
